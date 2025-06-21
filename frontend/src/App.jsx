@@ -455,7 +455,7 @@ function App() {
       
       {/* Footer */}
       <div className="text-center py-4 text-sm text-gray-500">
-        <p>提示：拖动磁贴可以重新排序 | 数据已同步到云端</p>
+        
       </div>
     </div>
   );
