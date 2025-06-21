@@ -5,7 +5,7 @@ import pinyin from 'pinyin';
 // API configuration - Update this with your worker URL
 const API_BASE_URL = import.meta.env.DEV 
   ? 'http://localhost:8787/api' 
-  : 'https://your-worker.your-subdomain.workers.dev/api';
+  : 'https://nav-page-worker.baidu2.workers.dev/api';
 
 // Convert Chinese to Pinyin for search
 const toPinyin = (text) => {
