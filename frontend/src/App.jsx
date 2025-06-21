@@ -84,34 +84,48 @@ function App() {
   const handleDragStart = (e, tile) => {
     setDraggedTile(tile);
     e.dataTransfer.effectAllowed = 'move';
+    // Add a slight delay to show the scale animation
+    setTimeout(() => {
+      e.target.style.opacity = '0';
+    }, 0);
   };
 
   const handleDragOver = (e, tile) => {
     e.preventDefault();
     if (draggedTile && draggedTile.id !== tile.id) {
       setDragOverTile(tile.id);
+      
+      // Reorder tiles for smooth animation
+      const newTiles = [...tiles];
+      const draggedIndex = newTiles.findIndex(t => t.id === draggedTile.id);
+      const targetIndex = newTiles.findIndex(t => t.id === tile.id);
+      
+      if (draggedIndex !== targetIndex) {
+        newTiles.splice(draggedIndex, 1);
+        newTiles.splice(targetIndex, 0, draggedTile);
+        setTiles(newTiles);
+      }
     }
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
     setDraggedTile(null);
     setDragOverTile(null);
+    // Save the new order
+    saveTiles(tiles);
   };
 
   const handleDrop = (e, targetTile) => {
     e.preventDefault();
-    if (!draggedTile || draggedTile.id === targetTile.id) return;
-
-    const newTiles = [...tiles];
-    const draggedIndex = newTiles.findIndex(t => t.id === draggedTile.id);
-    const targetIndex = newTiles.findIndex(t => t.id === targetTile.id);
-
-    // Swap positions
-    [newTiles[draggedIndex], newTiles[targetIndex]] = [newTiles[targetIndex], newTiles[draggedIndex]];
-    
-    saveTiles(newTiles);
     setDraggedTile(null);
     setDragOverTile(null);
+  };
+
+  const handleDragLeave = (e) => {
+    if (e.target.classList.contains('tile-container')) {
+      setDragOverTile(null);
+    }
   };
 
   // Add/Edit tile
@@ -413,19 +427,37 @@ function App() {
                 onDragOver={(e) => handleDragOver(e, tile)}
                 onDragEnd={handleDragEnd}
                 onDrop={(e) => handleDrop(e, tile)}
+                onDragLeave={handleDragLeave}
                 className={`
-                  relative group cursor-move transition-all duration-200
-                  ${draggedTile?.id === tile.id ? 'opacity-50' : ''}
-                  ${dragOverTile === tile.id ? 'scale-105' : ''}
+                  tile-container relative group cursor-move
+                  transition-all duration-300 ease-in-out transform-gpu
+                  ${draggedTile?.id === tile.id ? 'scale-110 rotate-3 z-50' : ''}
+                  ${dragOverTile === tile.id && draggedTile?.id !== tile.id ? 'scale-95' : ''}
+                  ${!draggedTile ? '' : draggedTile.id !== tile.id ? 'scale-100' : ''}
                 `}
+                style={{
+                  opacity: draggedTile?.id === tile.id ? 0.5 : 1,
+                  transform: draggedTile?.id === tile.id ? 'scale(1.1) rotate(3deg)' : 
+                            dragOverTile === tile.id && draggedTile?.id !== tile.id ? 'scale(0.95)' : 
+                            'scale(1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
               >
                 <a
                   href={tile.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow p-4 h-32 relative overflow-hidden"
+                  className={`
+                    block bg-white rounded-xl shadow-sm hover:shadow-lg 
+                    transition-all duration-300 p-4 h-32 relative overflow-hidden
+                    ${draggedTile ? 'pointer-events-none' : ''}
+                  `}
                   style={{
                     borderTop: `4px solid ${tile.color}`,
+                    transform: draggedTile?.id === tile.id ? 'scale(1.05)' : 'scale(1)',
+                    boxShadow: draggedTile?.id === tile.id ? 
+                      '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' : 
+                      undefined,
                   }}
                   onClick={(e) => {
                     if (e.target.closest('button')) {
@@ -459,7 +491,11 @@ function App() {
                 </a>
                 
                 {/* Edit/Delete Buttons */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <div className={`
+                  absolute top-2 right-2 opacity-0 group-hover:opacity-100 
+                  transition-opacity flex gap-1
+                  ${draggedTile ? 'pointer-events-none' : ''}
+                `}>
                   <button
                     onClick={(e) => {
                       e.preventDefault();
