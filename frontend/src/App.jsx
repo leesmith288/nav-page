@@ -172,14 +172,67 @@ function App() {
     reader.readAsText(file);
   };
 
-  // Get favicon URL with multiple fallbacks
-  const getFaviconUrl = (url) => {
-    try {
-      const domain = new URL(url).hostname;
-      return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-    } catch {
-      return null;
+  // Enhanced favicon component with multiple sources
+  const FaviconImage = ({ url, name, color }) => {
+    const [currentSrc, setCurrentSrc] = useState(0);
+    const [hasError, setHasError] = useState(false);
+    
+    const domain = (() => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return '';
+      }
+    })();
+
+    // Priority order of favicon sources (from highest to lowest quality)
+    const faviconSources = [
+      // 1. Clearbit Logo API - Highest quality, returns company logos
+      `https://logo.clearbit.com/${domain}`,
+      
+      // 2. Google's S2 favicons with size parameter - Good quality
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+      
+      // 3. Favicon.ico directly from the site - Variable quality
+      `https://${domain}/favicon.ico`,
+      
+      // 4. DuckDuckGo icons - Fallback option
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+      
+      // 5. Additional fallback - favicon grabber service
+      `https://favicongrabber.com/api/grab/${domain}`,
+    ];
+
+    const handleError = () => {
+      if (currentSrc < faviconSources.length - 1) {
+        setCurrentSrc(currentSrc + 1);
+      } else {
+        setHasError(true);
+      }
+    };
+
+    if (hasError || !domain) {
+      return (
+        <Globe 
+          className="w-10 h-10"
+          style={{ color: color }}
+        />
+      );
     }
+
+    return (
+      <img 
+        src={faviconSources[currentSrc]}
+        alt={name}
+        className="w-12 h-12 object-contain"
+        onError={handleError}
+        loading="lazy"
+        style={{
+          imageRendering: 'crisp-edges',
+          imageRendering: '-webkit-optimize-contrast',
+        }}
+      />
+    );
   };
 
   // Tile Modal Component
@@ -391,25 +444,10 @@ function App() {
                       className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
                       style={{ backgroundColor: `${tile.color}15` }}
                     >
-                      <img 
-                        src={getFaviconUrl(tile.url)}
-                        alt=""
-                        className="w-12 h-12 object-contain"
-                        onError={(e) => {
-                          // Try Google favicon service as fallback
-                          if (!e.target.dataset.fallback) {
-                            e.target.dataset.fallback = 'true';
-                            e.target.src = `https://www.google.com/s2/favicons?domain=${new URL(tile.url).hostname}&sz=128`;
-                          } else {
-                            // If both fail, show globe icon
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }
-                        }}
-                      />
-                      <Globe 
-                        className="w-10 h-10 hidden"
-                        style={{ color: tile.color }}
+                      <FaviconImage 
+                        url={tile.url} 
+                        name={tile.name} 
+                        color={tile.color}
                       />
                     </div>
                   </div>
