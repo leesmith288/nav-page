@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid3x3, Save, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle } from 'lucide-react';
 import pinyin from 'pinyin';
 
 // API configuration - Update this with your worker URL
 const API_BASE_URL = import.meta.env.DEV 
   ? 'http://localhost:8787/api' 
-  : 'https://nav-page-worker.baidu2.workers.dev/api';
+  : 'https://your-worker.your-subdomain.workers.dev/api';
 
 // Convert Chinese to Pinyin for search
 const toPinyin = (text) => {
@@ -337,7 +337,7 @@ function App() {
           </div>
         ) : filteredTiles.length === 0 ? (
           <div className="text-center py-12">
-            <Grid3x3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <Grid className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 mb-4">
               {searchTerm ? '没有找到匹配的磁贴' : '还没有添加任何磁贴'}
             </p>
