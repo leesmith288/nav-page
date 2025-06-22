@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image } from 'lucide-react';
 import pinyin from 'pinyin';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+
 
 // API configuration - Update this with your worker URL
 const API_BASE_URL = import.meta.env.DEV 
@@ -25,8 +27,6 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTile, setEditingTile] = useState(null);
-  const [draggedTile, setDraggedTile] = useState(null);
-  const [dragOverTile, setDragOverTile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -80,39 +80,18 @@ function App() {
     return nameMatch || urlMatch;
   });
 
-  // Drag and drop handlers
-  const handleDragStart = (e, tile) => {
-    setDraggedTile(tile);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  // Handle drag end for @hello-pangea/dnd
+const handleOnDragEnd = (result) => {
+  if (!result.destination) return;
 
-  const handleDragOver = (e, tile) => {
-    e.preventDefault();
-    if (draggedTile && draggedTile.id !== tile.id) {
-      setDragOverTile(tile.id);
-    }
-  };
+  const items = Array.from(tiles);
+  const [reorderedItem] = items.splice(result.source.index, 1);
+  items.splice(result.destination.index, 0, reorderedItem);
 
-  const handleDragEnd = () => {
-    setDraggedTile(null);
-    setDragOverTile(null);
-  };
+  saveTiles(items);
+};
 
-  const handleDrop = (e, targetTile) => {
-    e.preventDefault();
-    if (!draggedTile || draggedTile.id === targetTile.id) return;
-
-    const newTiles = [...tiles];
-    const draggedIndex = newTiles.findIndex(t => t.id === draggedTile.id);
-    const targetIndex = newTiles.findIndex(t => t.id === targetTile.id);
-
-    // Swap positions
-    [newTiles[draggedIndex], newTiles[targetIndex]] = [newTiles[targetIndex], newTiles[draggedIndex]];
-    
-    saveTiles(newTiles);
-    setDraggedTile(null);
-    setDragOverTile(null);
-  };
+  
 
   // Add/Edit tile
   const handleSaveTile = (tileData) => {
@@ -565,21 +544,27 @@ function App() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {filteredTiles.map((tile) => (
+         <DragDropContext onDragEnd={handleOnDragEnd}>
+  <Droppable droppableId="tiles" direction="horizontal">
+    {(provided) => (
+      <div 
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+        {...provided.droppableProps}
+        ref={provided.innerRef}
+      >
+        {filteredTiles.map((tile, index) => (
+          <Draggable key={tile.id} draggableId={tile.id} index={index}>
+            {(provided, snapshot) => (
               <div
-                key={tile.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, tile)}
-                onDragOver={(e) => handleDragOver(e, tile)}
-                onDragEnd={handleDragEnd}
-                onDrop={(e) => handleDrop(e, tile)}
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                {...provided.dragHandleProps}
                 className={`
-                  relative group cursor-move transition-all duration-200
-                  ${draggedTile?.id === tile.id ? 'opacity-50' : ''}
-                  ${dragOverTile === tile.id ? 'scale-105' : ''}
+                  relative group transition-all duration-200
+                  ${snapshot.isDragging ? 'opacity-50' : ''}
                 `}
               >
+
                 <a
                   href={tile.url}
                   target="_blank"
@@ -666,8 +651,14 @@ function App() {
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </Draggable>
+        ))}
+        {provided.placeholder}
+      </div>
+    )}
+  </Droppable>
+</DragDropContext>
         )}
       </div>
 
