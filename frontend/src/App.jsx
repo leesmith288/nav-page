@@ -545,7 +545,7 @@ const handleOnDragEnd = (result) => {
           </div>
         ) : (
          <DragDropContext onDragEnd={handleOnDragEnd}>
-  <Droppable droppableId="tiles" direction="horizontal">
+  <Droppable droppableId="tiles">
     {(provided) => (
       <div 
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
