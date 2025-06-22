@@ -8,7 +8,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -37,237 +36,6 @@ const toPinyin = (text) => {
   }
 };
 
-// Tile Component (for rendering in DragOverlay)
-function TileContent({ tile, isDragging = false }) {
-  // Helper function to convert hex to RGB
-  const hexToRgb = (hex) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
-  };
-
-  return (
-    <div
-      className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
-      style={(() => {
-        if (!tile.darkness || tile.darkness === 0) {
-          return {
-            borderTop: `4px solid ${tile.color}`,
-            cursor: isDragging ? 'grabbing' : 'grab',
-          };
-        }
-        
-        const rgb = hexToRgb(tile.color);
-        if (rgb) {
-          const alpha = tile.darkness / 100;
-          return {
-            backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
-            borderTop: `4px solid ${tile.color}`,
-            cursor: isDragging ? 'grabbing' : 'grab',
-          };
-        }
-        
-        return {
-          borderTop: `4px solid ${tile.color}`,
-          cursor: isDragging ? 'grabbing' : 'grab',
-        };
-      })()}
-    >
-      {/* External link indicator */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        <ExternalLink className="w-4 h-4 text-gray-400" />
-      </div>
-      
-      {/* Large Favicon */}
-      <div className="flex items-center justify-center mb-3">
-        <div 
-          className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
-          style={{ backgroundColor: `${tile.color}15` }}
-        >
-          <FaviconImage 
-            url={tile.url} 
-            name={tile.name} 
-            color={tile.color}
-            customIcon={tile.customIcon}
-          />
-        </div>
-      </div>
-      
-      {/* Title with dynamic color based on background darkness */}
-      <h3 
-        className={`text-sm font-medium text-center truncate px-1 ${
-          tile.darkness > 50 ? 'text-white' : 'text-gray-800'
-        }`}
-      >
-        {tile.name}
-      </h3>
-    </div>
-  );
-}
-
-// Sortable Tile Component
-function SortableTile({ tile, onEdit, onDelete }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: tile.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
-  };
-
-  // Helper function to convert hex to RGB
-  const hexToRgb = (hex) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="relative group transition-all duration-200"
-    >
-      <div {...attributes} {...listeners}>
-        <TileContent tile={tile} />
-      </div>
-      
-      {/* Edit/Delete Buttons - Outside of draggable area */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20 pointer-events-none">
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onEdit(tile);
-          }}
-          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors pointer-events-auto"
-        >
-          <Edit2 className="w-3.5 h-3.5 text-gray-600" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete(tile.id);
-          }}
-          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors pointer-events-auto"
-        >
-          <Trash2 className="w-3.5 h-3.5 text-red-600" />
-        </button>
-      </div>
-      
-      {/* Clickable link - separate from draggable area */}
-      {!isDragging && (
-        <a
-          href={tile.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute inset-0 z-10"
-          onClick={(e) => {
-            // Only navigate if not clicking on buttons
-            if (e.target.closest('button')) {
-              e.preventDefault();
-            }
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-// Enhanced favicon component with custom icon support
-const FaviconImage = ({ url, name, color, customIcon }) => {
-  const [currentSrc, setCurrentSrc] = useState(0);
-  const [hasError, setHasError] = useState(false);
-  
-  const domain = (() => {
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return '';
-    }
-  })();
-
-  // If custom icon is provided, use it directly
-  if (customIcon) {
-    return (
-      <img 
-        src={customIcon}
-        alt={name}
-        className="w-12 h-12 object-contain"
-        onError={() => setHasError(true)}
-        loading="lazy"
-        style={{
-          WebkitImageRendering: '-webkit-optimize-contrast',
-          imageRendering: 'crisp-edges',
-        }}
-      />
-    );
-  }
-
-  // Priority order of favicon sources (from highest to lowest quality)
-  const faviconSources = [
-    // 1. Clearbit Logo API - Highest quality, returns company logos
-    `https://logo.clearbit.com/${domain}`,
-    
-    // 2. Google's S2 favicons with size parameter - Good quality
-    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-    
-    // 3. Favicon.ico directly from the site - Variable quality
-    `https://${domain}/favicon.ico`,
-    
-    // 4. DuckDuckGo icons - Fallback option
-    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-    
-    // 5. Additional fallback - favicon grabber service
-    `https://favicongrabber.com/api/grab/${domain}`,
-  ];
-
-  const handleError = () => {
-    if (currentSrc < faviconSources.length - 1) {
-      setCurrentSrc(currentSrc + 1);
-    } else {
-      setHasError(true);
-    }
-  };
-
-  if (hasError || !domain) {
-    return (
-      <Globe 
-        className="w-10 h-10"
-        style={{ color: color }}
-      />
-    );
-  }
-
-  return (
-    <img 
-      src={faviconSources[currentSrc]}
-      alt={name}
-      className="w-12 h-12 object-contain"
-      onError={handleError}
-      loading="lazy"
-      style={{
-        WebkitImageRendering: '-webkit-optimize-contrast',
-        imageRendering: 'crisp-edges',
-      }}
-    />
-  );
-};
-
 function App() {
   const [tiles, setTiles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -276,7 +44,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [activeId, setActiveId] = useState(null);
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
@@ -339,12 +106,6 @@ function App() {
     return nameMatch || urlMatch;
   });
 
-  // Handle drag start
-  const handleDragStart = (event) => {
-    const { active } = event;
-    setActiveId(active.id);
-  };
-
   // Handle drag end for @dnd-kit
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -356,8 +117,6 @@ function App() {
       const newTiles = arrayMove(tiles, oldIndex, newIndex);
       saveTiles(newTiles);
     }
-    
-    setActiveId(null);
   };
 
   // Add/Edit tile
@@ -442,6 +201,195 @@ function App() {
     // Calculate luminance
     const luminance = (0.299 * adjustedR + 0.587 * adjustedG + 0.114 * adjustedB) / 255;
     return luminance < 0.5;
+  };
+
+  // Sortable Tile Component
+  function SortableTile({ tile }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({ id: tile.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="relative group cursor-move transition-all duration-200"
+      >
+        <div
+          className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
+          style={(() => {
+            if (!tile.darkness || tile.darkness === 0) {
+              return {
+                borderTop: `4px solid ${tile.color}`,
+              };
+            }
+            
+            const rgb = hexToRgb(tile.color);
+            if (rgb) {
+              const alpha = tile.darkness / 100;
+              return {
+                backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+                borderTop: `4px solid ${tile.color}`,
+              };
+            }
+            
+            return {
+              borderTop: `4px solid ${tile.color}`,
+            };
+          })()}
+          onClick={(e) => {
+            if (!e.target.closest('button') && !e.ctrlKey && !e.metaKey) {
+              window.open(tile.url, '_blank');
+            }
+          }}
+        >
+          {/* External link indicator */}
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <ExternalLink className="w-4 h-4 text-gray-400" />
+          </div>
+          
+          {/* Large Favicon */}
+          <div className="flex items-center justify-center mb-3">
+            <div 
+              className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+              style={{ backgroundColor: `${tile.color}15` }}
+            >
+              <FaviconImage 
+                url={tile.url} 
+                name={tile.name} 
+                color={tile.color}
+                customIcon={tile.customIcon}
+              />
+            </div>
+          </div>
+          
+          {/* Title with dynamic color based on background darkness */}
+          <h3 
+            className={`text-sm font-medium text-center truncate px-1 ${
+              tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+            }`}
+          >
+            {tile.name}
+          </h3>
+        </div>
+        
+        {/* Edit/Delete Buttons */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setEditingTile(tile);
+              setIsAddModalOpen(true);
+            }}
+            className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+          >
+            <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDeleteTile(tile.id);
+            }}
+            className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Enhanced favicon component with custom icon support
+  const FaviconImage = ({ url, name, color, customIcon }) => {
+    const [currentSrc, setCurrentSrc] = useState(0);
+    const [hasError, setHasError] = useState(false);
+    
+    const domain = (() => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return '';
+      }
+    })();
+
+    // If custom icon is provided, use it directly
+    if (customIcon) {
+      return (
+        <img 
+          src={customIcon}
+          alt={name}
+          className="w-12 h-12 object-contain"
+          onError={() => setHasError(true)}
+          loading="lazy"
+          style={{
+            WebkitImageRendering: '-webkit-optimize-contrast',
+            imageRendering: 'crisp-edges',
+          }}
+        />
+      );
+    }
+
+    // Priority order of favicon sources (from highest to lowest quality)
+    const faviconSources = [
+      // 1. Clearbit Logo API - Highest quality, returns company logos
+      `https://logo.clearbit.com/${domain}`,
+      
+      // 2. Google's S2 favicons with size parameter - Good quality
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+      
+      // 3. Favicon.ico directly from the site - Variable quality
+      `https://${domain}/favicon.ico`,
+      
+      // 4. DuckDuckGo icons - Fallback option
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+      
+      // 5. Additional fallback - favicon grabber service
+      `https://favicongrabber.com/api/grab/${domain}`,
+    ];
+
+    const handleError = () => {
+      if (currentSrc < faviconSources.length - 1) {
+        setCurrentSrc(currentSrc + 1);
+      } else {
+        setHasError(true);
+      }
+    };
+
+    if (hasError || !domain) {
+      return (
+        <Globe 
+          className="w-10 h-10"
+          style={{ color: color }}
+        />
+      );
+    }
+
+    return (
+      <img 
+        src={faviconSources[currentSrc]}
+        alt={name}
+        className="w-12 h-12 object-contain"
+        onError={handleError}
+        loading="lazy"
+        style={{
+          WebkitImageRendering: '-webkit-optimize-contrast',
+          imageRendering: 'crisp-edges',
+        }}
+      />
+    );
   };
 
   // Tile Modal Component
@@ -734,7 +682,6 @@ function App() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             <SortableContext
@@ -746,25 +693,10 @@ function App() {
                   <SortableTile
                     key={tile.id}
                     tile={tile}
-                    onEdit={(tile) => {
-                      setEditingTile(tile);
-                      setIsAddModalOpen(true);
-                    }}
-                    onDelete={handleDeleteTile}
                   />
                 ))}
               </div>
             </SortableContext>
-            <DragOverlay>
-              {activeId ? (
-                <div className="cursor-grabbing">
-                  <TileContent 
-                    tile={tiles.find(t => t.id === activeId)} 
-                    isDragging={true}
-                  />
-                </div>
-              ) : null}
-            </DragOverlay>
           </DndContext>
         )}
       </div>
