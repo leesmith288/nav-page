@@ -172,19 +172,6 @@ function App() {
     reader.readAsText(file);
   };
 
-  // Helper function to determine if a color is dark
-  const isColorDark = (color) => {
-    // Convert hex to RGB
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    
-    // Calculate luminance
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance < 0.5;
-  };
-
   // Enhanced favicon component with custom icon support
   const FaviconImage = ({ url, name, color, customIcon }) => {
     const [currentSrc, setCurrentSrc] = useState(0);
@@ -498,10 +485,9 @@ function App() {
                   href={tile.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
+                  className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow p-4 h-32 relative overflow-hidden"
                   style={{
-                    backgroundColor: tile.color,
-                    background: `linear-gradient(135deg, ${tile.color} 0%, ${tile.color}dd 100%)`,
+                    borderTop: `4px solid ${tile.color}`,
                   }}
                   onClick={(e) => {
                     if (e.target.closest('button')) {
@@ -509,27 +495,16 @@ function App() {
                     }
                   }}
                 >
-                  {/* Decorative gradient overlay */}
-                  <div 
-                    className="absolute inset-0 opacity-10"
-                    style={{
-                      background: `radial-gradient(circle at top right, white 0%, transparent 70%)`,
-                    }}
-                  />
-                  
                   {/* External link indicator */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <ExternalLink className="w-4 h-4 text-white/70" />
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ExternalLink className="w-4 h-4 text-gray-400" />
                   </div>
                   
                   {/* Large Favicon */}
-                  <div className="flex items-center justify-center mb-3 relative z-10">
+                  <div className="flex items-center justify-center mb-3">
                     <div 
-                      className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden shadow-md backdrop-blur-sm"
-                      style={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        backdropFilter: 'blur(10px)',
-                      }}
+                      className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+                      style={{ backgroundColor: `${tile.color}15` }}
                     >
                       <FaviconImage 
                         url={tile.url} 
@@ -540,18 +515,14 @@ function App() {
                     </div>
                   </div>
                   
-                  {/* Title with dynamic color based on background */}
-                  <h3 
-                    className={`text-sm font-medium text-center truncate px-1 relative z-10 ${
-                      isColorDark(tile.color) ? 'text-white drop-shadow-sm' : 'text-gray-900'
-                    }`}
-                  >
+                  {/* Title */}
+                  <h3 className="text-sm font-medium text-gray-800 text-center truncate px-1">
                     {tile.name}
                   </h3>
                 </a>
                 
                 {/* Edit/Delete Buttons */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                   <button
                     onClick={(e) => {
                       e.preventDefault();
@@ -559,9 +530,9 @@ function App() {
                       setEditingTile(tile);
                       setIsAddModalOpen(true);
                     }}
-                    className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg hover:bg-white shadow-sm transition-colors"
+                    className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
                   >
-                    <Edit2 className="w-3.5 h-3.5 text-gray-700" />
+                    <Edit2 className="w-3.5 h-3.5 text-gray-600" />
                   </button>
                   <button
                     onClick={(e) => {
@@ -569,7 +540,7 @@ function App() {
                       e.stopPropagation();
                       handleDeleteTile(tile.id);
                     }}
-                    className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg hover:bg-white shadow-sm transition-colors"
+                    className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-600" />
                   </button>
