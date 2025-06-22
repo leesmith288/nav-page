@@ -211,6 +211,7 @@ function App() {
       setNodeRef,
       transform,
       transition,
+      isDragging,
     } = useSortable({ id: tile.id });
 
     const style = {
@@ -224,10 +225,10 @@ function App() {
         style={style}
         {...attributes}
         {...listeners}
-        className="relative group cursor-move transition-all duration-200"
+        className={`relative group cursor-move ${isDragging ? '' : 'transition-all duration-200'}`}
       >
         <div
-          className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
+          className={`block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group ${isDragging ? '' : 'transition-all duration-300'}`}
           style={(() => {
             if (!tile.darkness || tile.darkness === 0) {
               return {
