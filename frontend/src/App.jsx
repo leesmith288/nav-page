@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image } from 'lucide-react';
 import pinyin from 'pinyin';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // API configuration - Update this with your worker URL
 const API_BASE_URL = import.meta.env.DEV 
@@ -22,6 +36,209 @@ const toPinyin = (text) => {
   }
 };
 
+// Sortable Tile Component
+function SortableTile({ tile, onEdit, onDelete }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tile.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  // Helper function to convert hex to RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="relative group transition-all duration-200"
+    >
+      <a
+        href={tile.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
+        style={(() => {
+          if (!tile.darkness || tile.darkness === 0) {
+            return {
+              borderTop: `4px solid ${tile.color}`,
+            };
+          }
+          
+          const rgb = hexToRgb(tile.color);
+          if (rgb) {
+            const alpha = tile.darkness / 100;
+            return {
+              backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+              borderTop: `4px solid ${tile.color}`,
+            };
+          }
+          
+          return {
+            borderTop: `4px solid ${tile.color}`,
+          };
+        })()}
+        onClick={(e) => {
+          if (e.target.closest('button')) {
+            e.preventDefault();
+          }
+        }}
+      >
+        {/* External link indicator */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <ExternalLink className="w-4 h-4 text-gray-400" />
+        </div>
+        
+        {/* Large Favicon */}
+        <div className="flex items-center justify-center mb-3">
+          <div 
+            className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+            style={{ backgroundColor: `${tile.color}15` }}
+          >
+            <FaviconImage 
+              url={tile.url} 
+              name={tile.name} 
+              color={tile.color}
+              customIcon={tile.customIcon}
+            />
+          </div>
+        </div>
+        
+        {/* Title with dynamic color based on background darkness */}
+        <h3 
+          className={`text-sm font-medium text-center truncate px-1 ${
+            tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+          }`}
+        >
+          {tile.name}
+        </h3>
+      </a>
+      
+      {/* Edit/Delete Buttons */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onEdit(tile);
+          }}
+          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+        >
+          <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete(tile.id);
+          }}
+          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Enhanced favicon component with custom icon support
+const FaviconImage = ({ url, name, color, customIcon }) => {
+  const [currentSrc, setCurrentSrc] = useState(0);
+  const [hasError, setHasError] = useState(false);
+  
+  const domain = (() => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  })();
+
+  // If custom icon is provided, use it directly
+  if (customIcon) {
+    return (
+      <img 
+        src={customIcon}
+        alt={name}
+        className="w-12 h-12 object-contain"
+        onError={() => setHasError(true)}
+        loading="lazy"
+        style={{
+          WebkitImageRendering: '-webkit-optimize-contrast',
+          imageRendering: 'crisp-edges',
+        }}
+      />
+    );
+  }
+
+  // Priority order of favicon sources (from highest to lowest quality)
+  const faviconSources = [
+    // 1. Clearbit Logo API - Highest quality, returns company logos
+    `https://logo.clearbit.com/${domain}`,
+    
+    // 2. Google's S2 favicons with size parameter - Good quality
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+    
+    // 3. Favicon.ico directly from the site - Variable quality
+    `https://${domain}/favicon.ico`,
+    
+    // 4. DuckDuckGo icons - Fallback option
+    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    
+    // 5. Additional fallback - favicon grabber service
+    `https://favicongrabber.com/api/grab/${domain}`,
+  ];
+
+  const handleError = () => {
+    if (currentSrc < faviconSources.length - 1) {
+      setCurrentSrc(currentSrc + 1);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (hasError || !domain) {
+    return (
+      <Globe 
+        className="w-10 h-10"
+        style={{ color: color }}
+      />
+    );
+  }
+
+  return (
+    <img 
+      src={faviconSources[currentSrc]}
+      alt={name}
+      className="w-12 h-12 object-contain"
+      onError={handleError}
+      loading="lazy"
+      style={{
+        WebkitImageRendering: '-webkit-optimize-contrast',
+        imageRendering: 'crisp-edges',
+      }}
+    />
+  );
+};
+
 function App() {
   const [tiles, setTiles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +247,14 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Setup sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Load tiles from API
   useEffect(() => {
@@ -80,18 +305,18 @@ function App() {
     return nameMatch || urlMatch;
   });
 
-  // Handle drag end for @hello-pangea/dnd
-const handleOnDragEnd = (result) => {
-  if (!result.destination) return;
+  // Handle drag end for @dnd-kit
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
 
-  const items = Array.from(tiles);
-  const [reorderedItem] = items.splice(result.source.index, 1);
-  items.splice(result.destination.index, 0, reorderedItem);
-
-  saveTiles(items);
-};
-
-  
+    if (active.id !== over.id) {
+      const oldIndex = tiles.findIndex((tile) => tile.id === active.id);
+      const newIndex = tiles.findIndex((tile) => tile.id === over.id);
+      
+      const newTiles = arrayMove(tiles, oldIndex, newIndex);
+      saveTiles(newTiles);
+    }
+  };
 
   // Add/Edit tile
   const handleSaveTile = (tileData) => {
@@ -175,86 +400,6 @@ const handleOnDragEnd = (result) => {
     // Calculate luminance
     const luminance = (0.299 * adjustedR + 0.587 * adjustedG + 0.114 * adjustedB) / 255;
     return luminance < 0.5;
-  };
-
-  // Enhanced favicon component with custom icon support
-  const FaviconImage = ({ url, name, color, customIcon }) => {
-    const [currentSrc, setCurrentSrc] = useState(0);
-    const [hasError, setHasError] = useState(false);
-    
-    const domain = (() => {
-      try {
-        return new URL(url).hostname;
-      } catch {
-        return '';
-      }
-    })();
-
-    // If custom icon is provided, use it directly
-    if (customIcon) {
-      return (
-        <img 
-          src={customIcon}
-          alt={name}
-          className="w-12 h-12 object-contain"
-          onError={() => setHasError(true)}
-          loading="lazy"
-          style={{
-            imageRendering: 'crisp-edges',
-            imageRendering: '-webkit-optimize-contrast',
-          }}
-        />
-      );
-    }
-
-    // Priority order of favicon sources (from highest to lowest quality)
-    const faviconSources = [
-      // 1. Clearbit Logo API - Highest quality, returns company logos
-      `https://logo.clearbit.com/${domain}`,
-      
-      // 2. Google's S2 favicons with size parameter - Good quality
-      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-      
-      // 3. Favicon.ico directly from the site - Variable quality
-      `https://${domain}/favicon.ico`,
-      
-      // 4. DuckDuckGo icons - Fallback option
-      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-      
-      // 5. Additional fallback - favicon grabber service
-      `https://favicongrabber.com/api/grab/${domain}`,
-    ];
-
-    const handleError = () => {
-      if (currentSrc < faviconSources.length - 1) {
-        setCurrentSrc(currentSrc + 1);
-      } else {
-        setHasError(true);
-      }
-    };
-
-    if (hasError || !domain) {
-      return (
-        <Globe 
-          className="w-10 h-10"
-          style={{ color: color }}
-        />
-      );
-    }
-
-    return (
-      <img 
-        src={faviconSources[currentSrc]}
-        alt={name}
-        className="w-12 h-12 object-contain"
-        onError={handleError}
-        loading="lazy"
-        style={{
-          imageRendering: 'crisp-edges',
-          imageRendering: '-webkit-optimize-contrast',
-        }}
-      />
-    );
   };
 
   // Tile Modal Component
@@ -544,121 +689,30 @@ const handleOnDragEnd = (result) => {
             )}
           </div>
         ) : (
-         <DragDropContext onDragEnd={handleOnDragEnd}>
-  <Droppable droppableId="tiles">
-    {(provided) => (
-      <div 
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-        {...provided.droppableProps}
-        ref={provided.innerRef}
-      >
-        {filteredTiles.map((tile, index) => (
-          <Draggable key={tile.id} draggableId={tile.id} index={index}>
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.draggableProps}
-                {...provided.dragHandleProps}
-                className={`
-                  relative group transition-all duration-200
-                  ${snapshot.isDragging ? 'opacity-50' : ''}
-                `}
-              >
-
-                <a
-                  href={tile.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
-                  style={(() => {
-                    if (!tile.darkness || tile.darkness === 0) {
-                      return {
-                        borderTop: `4px solid ${tile.color}`,
-                      };
-                    }
-                    
-                    const rgb = hexToRgb(tile.color);
-                    if (rgb) {
-                      const alpha = tile.darkness / 100;
-                      return {
-                        backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
-                        borderTop: `4px solid ${tile.color}`,
-                      };
-                    }
-                    
-                    return {
-                      borderTop: `4px solid ${tile.color}`,
-                    };
-                  })()}
-                  onClick={(e) => {
-                    if (e.target.closest('button')) {
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  {/* External link indicator */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <ExternalLink className="w-4 h-4 text-gray-400" />
-                  </div>
-                  
-                  {/* Large Favicon */}
-                  <div className="flex items-center justify-center mb-3">
-                    <div 
-                      className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
-                      style={{ backgroundColor: `${tile.color}15` }}
-                    >
-                      <FaviconImage 
-                        url={tile.url} 
-                        name={tile.name} 
-                        color={tile.color}
-                        customIcon={tile.customIcon}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Title with dynamic color based on background darkness */}
-                  <h3 
-                    className={`text-sm font-medium text-center truncate px-1 ${
-                      tile.darkness > 50 ? 'text-white' : 'text-gray-800'
-                    }`}
-                  >
-                    {tile.name}
-                  </h3>
-                </a>
-                
-                {/* Edit/Delete Buttons */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={filteredTiles.map(tile => tile.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {filteredTiles.map((tile) => (
+                  <SortableTile
+                    key={tile.id}
+                    tile={tile}
+                    onEdit={(tile) => {
                       setEditingTile(tile);
                       setIsAddModalOpen(true);
                     }}
-                    className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-gray-600" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteTile(tile.id);
-                    }}
-                    className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                  </button>
-                </div>
+                    onDelete={handleDeleteTile}
+                  />
+                ))}
               </div>
-            )}
-          </Draggable>
-        ))}
-        {provided.placeholder}
-      </div>
-    )}
-  </Droppable>
-</DragDropContext>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
