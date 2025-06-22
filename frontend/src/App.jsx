@@ -172,6 +172,32 @@ function App() {
     reader.readAsText(file);
   };
 
+  // Helper function to convert hex to RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  // Helper function to determine if a color is dark
+  const isColorDark = (color, darkness = 0) => {
+    // Convert hex to RGB
+    const rgb = hexToRgb(color);
+    if (!rgb) return false;
+    
+    // Adjust for darkness level
+    const adjustedR = rgb.r * (1 - darkness / 100) + 255 * (darkness / 100);
+    const adjustedG = rgb.g * (1 - darkness / 100) + 255 * (darkness / 100);
+    const adjustedB = rgb.b * (1 - darkness / 100) + 255 * (darkness / 100);
+    
+    // Calculate luminance
+    const luminance = (0.299 * adjustedR + 0.587 * adjustedG + 0.114 * adjustedB) / 255;
+    return luminance < 0.5;
+  };
+
   // Enhanced favicon component with custom icon support
   const FaviconImage = ({ url, name, color, customIcon }) => {
     const [currentSrc, setCurrentSrc] = useState(0);
@@ -255,9 +281,43 @@ function App() {
   // Tile Modal Component
   const TileModal = () => {
     const [formData, setFormData] = useState(
-      editingTile || { name: '', url: '', color: '#3B82F6', customIcon: '' }
+      editingTile || { name: '', url: '', color: '#3B82F6', darkness: 0, customIcon: '' }
     );
     const [showCustomIcon, setShowCustomIcon] = useState(!!formData.customIcon);
+
+    // Generate background style based on darkness
+    const getPreviewStyle = () => {
+      if (!formData.darkness || formData.darkness === 0) {
+        return {
+          backgroundColor: 'white',
+          borderTop: `4px solid ${formData.color}`,
+        };
+      }
+      
+      const alpha = formData.darkness / 100;
+      const rgb = hexToRgb(formData.color);
+      if (rgb) {
+        return {
+          backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+          borderTop: `4px solid ${formData.color}`,
+        };
+      }
+      
+      return {
+        backgroundColor: 'white',
+        borderTop: `4px solid ${formData.color}`,
+      };
+    };
+
+    // Helper to convert hex to RGB
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -291,15 +351,54 @@ function App() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">颜色</label>
-              <div className="flex gap-2 flex-wrap">
-                {['#FF6B6B', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280', '#059669', '#DC2626', '#7C3AED'].map(color => (
-                  <button
-                    key={color}
-                    onClick={() => setFormData({ ...formData, color })}
-                    className={`w-8 h-8 rounded-full transition-all ${formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
-                    style={{ backgroundColor: color }}
+              <div className="space-y-3">
+                <div className="flex gap-2 flex-wrap">
+                  {['#FF6B6B', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280', '#059669', '#DC2626', '#7C3AED'].map(color => (
+                    <button
+                      key={color}
+                      onClick={() => setFormData({ ...formData, color })}
+                      className={`w-8 h-8 rounded-full transition-all ${formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+                
+                {/* Darkness slider */}
+                <div>
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                    <span>背景深度</span>
+                    <span>{formData.darkness || 0}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={formData.darkness || 0}
+                    onChange={(e) => setFormData({ ...formData, darkness: parseInt(e.target.value) })}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #e5e7eb 0%, ${formData.color} ${formData.darkness || 0}%, #e5e7eb ${formData.darkness || 0}%)`
+                    }}
                   />
-                ))}
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0% (仅顶部)</span>
+                    <span>100% (全彩)</span>
+                  </div>
+                </div>
+                
+                {/* Preview */}
+                <div className="mt-3">
+                  <p className="text-sm text-gray-600 mb-2">预览效果：</p>
+                  <div 
+                    className="w-24 h-24 rounded-xl shadow-sm mx-auto transition-all duration-300"
+                    style={getPreviewStyle()}
+                  >
+                    <div className="h-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -485,10 +584,27 @@ function App() {
                   href={tile.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow p-4 h-32 relative overflow-hidden"
-                  style={{
-                    borderTop: `4px solid ${tile.color}`,
-                  }}
+                  className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
+                  style={(() => {
+                    if (!tile.darkness || tile.darkness === 0) {
+                      return {
+                        borderTop: `4px solid ${tile.color}`,
+                      };
+                    }
+                    
+                    const rgb = hexToRgb(tile.color);
+                    if (rgb) {
+                      const alpha = tile.darkness / 100;
+                      return {
+                        backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+                        borderTop: `4px solid ${tile.color}`,
+                      };
+                    }
+                    
+                    return {
+                      borderTop: `4px solid ${tile.color}`,
+                    };
+                  })()}
                   onClick={(e) => {
                     if (e.target.closest('button')) {
                       e.preventDefault();
@@ -496,7 +612,7 @@ function App() {
                   }}
                 >
                   {/* External link indicator */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <ExternalLink className="w-4 h-4 text-gray-400" />
                   </div>
                   
@@ -515,14 +631,18 @@ function App() {
                     </div>
                   </div>
                   
-                  {/* Title */}
-                  <h3 className="text-sm font-medium text-gray-800 text-center truncate px-1">
+                  {/* Title with dynamic color based on background darkness */}
+                  <h3 
+                    className={`text-sm font-medium text-center truncate px-1 ${
+                      tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+                    }`}
+                  >
                     {tile.name}
                   </h3>
                 </a>
                 
                 {/* Edit/Delete Buttons */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
                   <button
                     onClick={(e) => {
                       e.preventDefault();
