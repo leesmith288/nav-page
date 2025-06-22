@@ -8,6 +8,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -36,6 +37,77 @@ const toPinyin = (text) => {
   }
 };
 
+// Tile Component (for rendering in DragOverlay)
+function TileContent({ tile, isDragging = false }) {
+  // Helper function to convert hex to RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  return (
+    <div
+      className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
+      style={(() => {
+        if (!tile.darkness || tile.darkness === 0) {
+          return {
+            borderTop: `4px solid ${tile.color}`,
+            cursor: isDragging ? 'grabbing' : 'grab',
+          };
+        }
+        
+        const rgb = hexToRgb(tile.color);
+        if (rgb) {
+          const alpha = tile.darkness / 100;
+          return {
+            backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+            borderTop: `4px solid ${tile.color}`,
+            cursor: isDragging ? 'grabbing' : 'grab',
+          };
+        }
+        
+        return {
+          borderTop: `4px solid ${tile.color}`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+        };
+      })()}
+    >
+      {/* External link indicator */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <ExternalLink className="w-4 h-4 text-gray-400" />
+      </div>
+      
+      {/* Large Favicon */}
+      <div className="flex items-center justify-center mb-3">
+        <div 
+          className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+          style={{ backgroundColor: `${tile.color}15` }}
+        >
+          <FaviconImage 
+            url={tile.url} 
+            name={tile.name} 
+            color={tile.color}
+            customIcon={tile.customIcon}
+          />
+        </div>
+      </div>
+      
+      {/* Title with dynamic color based on background darkness */}
+      <h3 
+        className={`text-sm font-medium text-center truncate px-1 ${
+          tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+        }`}
+      >
+        {tile.name}
+      </h3>
+    </div>
+  );
+}
+
 // Sortable Tile Component
 function SortableTile({ tile, onEdit, onDelete }) {
   const {
@@ -50,7 +122,7 @@ function SortableTile({ tile, onEdit, onDelete }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   // Helper function to convert hex to RGB
@@ -67,80 +139,21 @@ function SortableTile({ tile, onEdit, onDelete }) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className="relative group transition-all duration-200"
     >
-      <a
-        href={tile.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-4 h-32 relative overflow-hidden group"
-        style={(() => {
-          if (!tile.darkness || tile.darkness === 0) {
-            return {
-              borderTop: `4px solid ${tile.color}`,
-            };
-          }
-          
-          const rgb = hexToRgb(tile.color);
-          if (rgb) {
-            const alpha = tile.darkness / 100;
-            return {
-              backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
-              borderTop: `4px solid ${tile.color}`,
-            };
-          }
-          
-          return {
-            borderTop: `4px solid ${tile.color}`,
-          };
-        })()}
-        onClick={(e) => {
-          if (e.target.closest('button')) {
-            e.preventDefault();
-          }
-        }}
-      >
-        {/* External link indicator */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <ExternalLink className="w-4 h-4 text-gray-400" />
-        </div>
-        
-        {/* Large Favicon */}
-        <div className="flex items-center justify-center mb-3">
-          <div 
-            className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
-            style={{ backgroundColor: `${tile.color}15` }}
-          >
-            <FaviconImage 
-              url={tile.url} 
-              name={tile.name} 
-              color={tile.color}
-              customIcon={tile.customIcon}
-            />
-          </div>
-        </div>
-        
-        {/* Title with dynamic color based on background darkness */}
-        <h3 
-          className={`text-sm font-medium text-center truncate px-1 ${
-            tile.darkness > 50 ? 'text-white' : 'text-gray-800'
-          }`}
-        >
-          {tile.name}
-        </h3>
-      </a>
+      <div {...attributes} {...listeners}>
+        <TileContent tile={tile} />
+      </div>
       
-      {/* Edit/Delete Buttons */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+      {/* Edit/Delete Buttons - Outside of draggable area */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20 pointer-events-none">
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onEdit(tile);
           }}
-          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors pointer-events-auto"
         >
           <Edit2 className="w-3.5 h-3.5 text-gray-600" />
         </button>
@@ -150,11 +163,27 @@ function SortableTile({ tile, onEdit, onDelete }) {
             e.stopPropagation();
             onDelete(tile.id);
           }}
-          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors pointer-events-auto"
         >
           <Trash2 className="w-3.5 h-3.5 text-red-600" />
         </button>
       </div>
+      
+      {/* Clickable link - separate from draggable area */}
+      {!isDragging && (
+        <a
+          href={tile.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 z-10"
+          onClick={(e) => {
+            // Only navigate if not clicking on buttons
+            if (e.target.closest('button')) {
+              e.preventDefault();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -247,10 +276,15 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [activeId, setActiveId] = useState(null);
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -305,6 +339,12 @@ function App() {
     return nameMatch || urlMatch;
   });
 
+  // Handle drag start
+  const handleDragStart = (event) => {
+    const { active } = event;
+    setActiveId(active.id);
+  };
+
   // Handle drag end for @dnd-kit
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -316,6 +356,8 @@ function App() {
       const newTiles = arrayMove(tiles, oldIndex, newIndex);
       saveTiles(newTiles);
     }
+    
+    setActiveId(null);
   };
 
   // Add/Edit tile
@@ -692,6 +734,7 @@ function App() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             <SortableContext
@@ -712,6 +755,16 @@ function App() {
                 ))}
               </div>
             </SortableContext>
+            <DragOverlay>
+              {activeId ? (
+                <div className="cursor-grabbing">
+                  <TileContent 
+                    tile={tiles.find(t => t.id === activeId)} 
+                    isDragging={true}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </div>
