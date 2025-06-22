@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle } from 'lucide-react';
 import pinyin from 'pinyin';
 
@@ -172,10 +172,14 @@ function App() {
     reader.readAsText(file);
   };
 
-  // Enhanced favicon component with multiple sources
+  // Enhanced favicon component with multiple sources and HD processing
   const FaviconImage = ({ url, name, color }) => {
+    const [processedSrc, setProcessedSrc] = useState(null);
     const [currentSrc, setCurrentSrc] = useState(0);
     const [hasError, setHasError] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(true);
+    const canvasRef = useRef(null);
+    const processedCache = useRef({});
     
     const domain = (() => {
       try {
@@ -193,23 +197,138 @@ function App() {
       // 2. Google's S2 favicons with size parameter - Good quality
       `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
       
-      // 3. Favicon.ico directly from the site - Variable quality
-      `https://${domain}/favicon.ico`,
+      // 3. Favicon Kit - provides multiple sizes
+      `https://api.faviconkit.com/${domain}/144`,
       
-      // 4. DuckDuckGo icons - Fallback option
+      // 4. Icon Horse - another high quality source
+      `https://icon.horse/icon/${domain}`,
+      
+      // 5. DuckDuckGo icons - Fallback option
       `https://icons.duckduckgo.com/ip3/${domain}.ico`,
       
-      // 5. Additional fallback - favicon grabber service
-      `https://favicongrabber.com/api/grab/${domain}`,
+      // 6. Google's standard favicon service
+      `https://www.google.com/s2/favicons?domain=${domain}`,
+      
+      // 7. Favicon.ico directly from the site - Variable quality
+      `https://${domain}/favicon.ico`,
     ];
 
-    const handleError = () => {
-      if (currentSrc < faviconSources.length - 1) {
-        setCurrentSrc(currentSrc + 1);
-      } else {
-        setHasError(true);
+    // Advanced image processing for HD quality
+    const processImage = (imgSrc) => {
+      // Check cache first
+      const cacheKey = `${domain}-${currentSrc}`;
+      if (processedCache.current[cacheKey]) {
+        setProcessedSrc(processedCache.current[cacheKey]);
+        setIsProcessing(false);
+        return;
       }
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d', { 
+          alpha: true,
+          desynchronized: true
+        });
+        
+        // Target size for HD quality
+        const targetSize = 192;
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, targetSize, targetSize);
+        
+        // Determine if image is low resolution
+        const isLowRes = img.width <= 64 || img.height <= 64;
+        const isVeryLowRes = img.width <= 32 || img.height <= 32;
+        
+        if (isLowRes) {
+          // Multi-pass upscaling for better quality
+          const passes = isVeryLowRes ? 3 : 2;
+          let tempCanvas = document.createElement('canvas');
+          let tempCtx = tempCanvas.getContext('2d');
+          
+          // First pass - initial upscale
+          let currentSize = Math.max(img.width, img.height);
+          for (let i = 0; i < passes; i++) {
+            currentSize = Math.min(currentSize * 2, targetSize);
+            tempCanvas.width = currentSize;
+            tempCanvas.height = currentSize;
+            
+            tempCtx.imageSmoothingEnabled = true;
+            tempCtx.imageSmoothingQuality = 'high';
+            
+            if (i === 0) {
+              // First draw from original image
+              tempCtx.drawImage(img, 0, 0, currentSize, currentSize);
+            } else {
+              // Subsequent draws from previous canvas
+              tempCtx.drawImage(tempCanvas, 0, 0, currentSize, currentSize);
+            }
+          }
+          
+          // Final draw with enhancement filters
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          
+          // Apply slight blur to reduce pixelation
+          ctx.filter = 'blur(0.5px)';
+          ctx.drawImage(tempCanvas, 0, 0, targetSize, targetSize);
+          
+          // Second pass - sharpening
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.filter = 'contrast(1.2) saturate(1.1) brightness(1.05)';
+          ctx.drawImage(canvas, 0, 0, targetSize, targetSize);
+          
+          // Edge enhancement for very low res images
+          if (isVeryLowRes) {
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.filter = 'contrast(1.1)';
+            ctx.globalAlpha = 0.9;
+            ctx.drawImage(canvas, 0, 0, targetSize, targetSize);
+            ctx.globalAlpha = 1.0;
+          }
+        } else {
+          // For high-res images, use high quality scaling
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.filter = 'none';
+          ctx.drawImage(img, 0, 0, targetSize, targetSize);
+        }
+        
+        // Convert to data URL with high quality
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        
+        // Cache the result
+        processedCache.current[cacheKey] = dataUrl;
+        
+        setProcessedSrc(dataUrl);
+        setIsProcessing(false);
+      };
+      
+      img.onerror = () => {
+        if (currentSrc < faviconSources.length - 1) {
+          setCurrentSrc(currentSrc + 1);
+        } else {
+          setHasError(true);
+          setIsProcessing(false);
+        }
+      };
+      
+      img.src = imgSrc;
     };
+
+    useEffect(() => {
+      if (!hasError && domain && faviconSources[currentSrc]) {
+        setIsProcessing(true);
+        processImage(faviconSources[currentSrc]);
+      }
+    }, [currentSrc, domain, hasError]);
 
     if (hasError || !domain) {
       return (
@@ -221,17 +340,24 @@ function App() {
     }
 
     return (
-      <img 
-        src={faviconSources[currentSrc]}
-        alt={name}
-        className="w-12 h-12 object-contain"
-        onError={handleError}
-        loading="lazy"
-        style={{
-          imageRendering: 'crisp-edges',
-          imageRendering: '-webkit-optimize-contrast',
-        }}
-      />
+      <>
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
+        {isProcessing ? (
+          <div className="w-12 h-12 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-gray-200 border-t-transparent animate-spin" />
+          </div>
+        ) : processedSrc ? (
+          <img 
+            src={processedSrc}
+            alt={name}
+            className="w-12 h-12 object-contain"
+            style={{
+              imageRendering: 'high-quality',
+              imageRendering: '-webkit-optimize-contrast',
+            }}
+          />
+        ) : null}
+      </>
     );
   };
 
