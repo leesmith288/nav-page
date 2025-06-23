@@ -1,4 +1,4 @@
-// Cloudflare Worker with KV storage for navigation tiles
+// Cloudflare Worker with D1 database storage for navigation tiles
 
 // CORS headers for cross-origin requests
 const corsHeaders = {
@@ -67,8 +67,25 @@ export default {
 // Get all tiles
 async function getTiles(env) {
   try {
-    const data = await env.NAV_TILES.get('tiles');
-    const tiles = data ? JSON.parse(data) : defaultTiles;
+    // Try to get from D1 first
+    const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
+    
+    let tiles;
+    if (result && result.data) {
+      tiles = JSON.parse(result.data);
+    } else {
+      // If no data in D1, check KV for migration
+      const kvData = await env.NAV_TILES.get('tiles');
+      if (kvData) {
+        tiles = JSON.parse(kvData);
+        // Migrate to D1
+        await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+          .bind(JSON.stringify(tiles))
+          .run();
+      } else {
+        tiles = defaultTiles;
+      }
+    }
     
     return new Response(JSON.stringify({ tiles }), {
       headers: {
@@ -104,7 +121,10 @@ async function updateTiles(request, env) {
       });
     }
     
-    await env.NAV_TILES.put('tiles', JSON.stringify(tiles));
+    // Save to D1
+    await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+      .bind(JSON.stringify(tiles))
+      .run();
     
     return new Response(JSON.stringify({ success: true, tiles }), {
       headers: {
@@ -128,8 +148,10 @@ async function updateTiles(request, env) {
 async function updateTile(request, env, tileId) {
   try {
     const body = await request.json();
-    const data = await env.NAV_TILES.get('tiles');
-    const tiles = data ? JSON.parse(data) : defaultTiles;
+    
+    // Get current tiles from D1
+    const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
+    let tiles = result && result.data ? JSON.parse(result.data) : defaultTiles;
     
     const index = tiles.findIndex(t => t.id === tileId);
     if (index === -1) {
@@ -140,7 +162,10 @@ async function updateTile(request, env, tileId) {
       tiles[index] = { id: tileId, ...body };
     }
     
-    await env.NAV_TILES.put('tiles', JSON.stringify(tiles));
+    // Save back to D1
+    await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+      .bind(JSON.stringify(tiles))
+      .run();
     
     return new Response(JSON.stringify({ success: true, tiles }), {
       headers: {
@@ -163,8 +188,9 @@ async function updateTile(request, env, tileId) {
 // Delete tile
 async function deleteTile(env, tileId) {
   try {
-    const data = await env.NAV_TILES.get('tiles');
-    const tiles = data ? JSON.parse(data) : defaultTiles;
+    // Get current tiles from D1
+    const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
+    let tiles = result && result.data ? JSON.parse(result.data) : defaultTiles;
     
     const filteredTiles = tiles.filter(t => t.id !== tileId);
     
@@ -178,7 +204,10 @@ async function deleteTile(env, tileId) {
       });
     }
     
-    await env.NAV_TILES.put('tiles', JSON.stringify(filteredTiles));
+    // Save back to D1
+    await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+      .bind(JSON.stringify(filteredTiles))
+      .run();
     
     return new Response(JSON.stringify({ success: true, tiles: filteredTiles }), {
       headers: {
