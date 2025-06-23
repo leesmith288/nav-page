@@ -25,6 +25,11 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // One-time migration endpoint
+    if (path === '/api/migrate' && request.method === 'POST') {
+      return await migrateKVtoD1(env);
+    }
+
     // Route handling
     if (path === '/api/tiles') {
       switch (request.method) {
@@ -64,11 +69,11 @@ export default {
   }
 };
 
-// Get all tiles
+// Get all tiles from D1
 async function getTiles(env) {
   try {
-    const data = await env.NAV_TILES.get('tiles');
-    const tiles = data ? JSON.parse(data) : defaultTiles;
+    const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
+    const tiles = result && result.data ? JSON.parse(result.data) : defaultTiles;
     
     return new Response(JSON.stringify({ tiles }), {
       headers: {
@@ -88,7 +93,7 @@ async function getTiles(env) {
   }
 }
 
-// Update all tiles
+// Update all tiles in D1
 async function updateTiles(request, env) {
   try {
     const body = await request.json();
@@ -104,7 +109,6 @@ async function updateTiles(request, env) {
       });
     }
     
-    // Save to D1
     await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
       .bind(JSON.stringify(tiles))
       .run();
@@ -132,20 +136,16 @@ async function updateTile(request, env, tileId) {
   try {
     const body = await request.json();
     
-    // Get current tiles from D1
     const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
     let tiles = result && result.data ? JSON.parse(result.data) : defaultTiles;
     
     const index = tiles.findIndex(t => t.id === tileId);
     if (index === -1) {
-      // Add new tile
       tiles.push({ id: tileId, ...body });
     } else {
-      // Update existing tile
       tiles[index] = { id: tileId, ...body };
     }
     
-    // Save back to D1
     await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
       .bind(JSON.stringify(tiles))
       .run();
@@ -171,7 +171,6 @@ async function updateTile(request, env, tileId) {
 // Delete tile
 async function deleteTile(env, tileId) {
   try {
-    // Get current tiles from D1
     const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
     let tiles = result && result.data ? JSON.parse(result.data) : defaultTiles;
     
@@ -187,7 +186,6 @@ async function deleteTile(env, tileId) {
       });
     }
     
-    // Save back to D1
     await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
       .bind(JSON.stringify(filteredTiles))
       .run();
@@ -201,6 +199,48 @@ async function deleteTile(env, tileId) {
   } catch (error) {
     console.error('Error deleting tile:', error);
     return new Response(JSON.stringify({ error: 'Failed to delete tile' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+}
+
+// One-time migration from KV to D1
+async function migrateKVtoD1(env) {
+  try {
+    const kvData = await env.NAV_TILES.get('tiles');
+    if (!kvData) {
+      return new Response(JSON.stringify({ error: 'No data in KV to migrate' }), {
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
+
+    const tiles = JSON.parse(kvData);
+    
+    await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+      .bind(JSON.stringify(tiles))
+      .run();
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Migration completed! You can now remove KV from wrangler.toml',
+      migratedTiles: tiles.length 
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    return new Response(JSON.stringify({ error: 'Migration failed', details: error.message }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
