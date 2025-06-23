@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw } from 'lucide-react';
 import pinyin from 'pinyin';
 import {
   DndContext,
@@ -44,6 +44,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshingFavicons, setRefreshingFavicons] = useState(false);
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
@@ -94,6 +95,56 @@ function App() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Refresh all favicons
+  const refreshFavicons = async () => {
+    setRefreshingFavicons(true);
+    const updatedTiles = await Promise.all(
+      tiles.map(async (tile) => {
+        if (tile.customIcon) return tile; // Skip tiles with custom icons
+        
+        const domain = (() => {
+          try {
+            return new URL(tile.url).hostname;
+          } catch {
+            return '';
+          }
+        })();
+
+        if (!domain) return tile;
+
+        // Test favicon sources in order
+        const faviconSources = [
+          `https://img.logo.dev/${domain}?token=free`, // Logo.dev (new)
+          `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+          `https://${domain}/favicon.ico`,
+          `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+        ];
+
+        for (const src of faviconSources) {
+          try {
+            const img = new Image();
+            img.src = src;
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              setTimeout(reject, 3000); // 3s timeout
+            });
+            
+            // If successful, save this favicon URL
+            return { ...tile, cachedFavicon: src };
+          } catch {
+            continue;
+          }
+        }
+        
+        return tile; // Return unchanged if no favicon found
+      })
+    );
+
+    await saveTiles(updatedTiles);
+    setRefreshingFavicons(false);
   };
 
   // Filter tiles based on search
@@ -271,6 +322,7 @@ function App() {
                 name={tile.name} 
                 color={tile.color}
                 customIcon={tile.customIcon}
+                cachedFavicon={tile.cachedFavicon}
               />
             </div>
           </div>
@@ -314,7 +366,7 @@ function App() {
   }
 
   // Enhanced favicon component with custom icon support
-  const FaviconImage = ({ url, name, color, customIcon }) => {
+  const FaviconImage = ({ url, name, color, customIcon, cachedFavicon }) => {
     const [currentSrc, setCurrentSrc] = useState(0);
     const [hasError, setHasError] = useState(false);
     
@@ -343,23 +395,18 @@ function App() {
       );
     }
 
-    // Priority order of favicon sources (from highest to lowest quality)
-    const faviconSources = [
-      // 1. Clearbit Logo API - Highest quality, returns company logos
-      `https://logo.clearbit.com/${domain}`,
-      
-      // 2. Google's S2 favicons with size parameter - Good quality
+    // If cached favicon exists, try it first
+    const baseFaviconSources = [
+      `https://img.logo.dev/${domain}?token=free`, // Logo.dev API (new, replacing Clearbit)
       `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-      
-      // 3. Favicon.ico directly from the site - Variable quality
       `https://${domain}/favicon.ico`,
-      
-      // 4. DuckDuckGo icons - Fallback option
       `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-      
-      // 5. Additional fallback - favicon grabber service
-      `https://favicongrabber.com/api/grab/${domain}`,
     ];
+
+    // Put cached favicon at the beginning if it exists
+    const faviconSources = cachedFavicon 
+      ? [cachedFavicon, ...baseFaviconSources.filter(src => src !== cachedFavicon)]
+      : baseFaviconSources;
 
     const handleError = () => {
       if (currentSrc < faviconSources.length - 1) {
@@ -434,6 +481,33 @@ function App() {
       } : null;
     };
 
+    // 20 carefully selected colors for better variety
+    const colorPalette = [
+      // Original colors
+      '#FF6B6B', // Red
+      '#F59E0B', // Amber
+      '#10B981', // Emerald
+      '#3B82F6', // Blue
+      '#8B5CF6', // Violet
+      '#EC4899', // Pink
+      '#6B7280', // Gray
+      '#059669', // Green
+      '#DC2626', // Red-600
+      '#7C3AED', // Purple
+      
+      // New colors (10 more)
+      '#14B8A6', // Teal
+      '#F97316', // Orange
+      '#0EA5E9', // Sky
+      '#6366F1', // Indigo
+      '#84CC16', // Lime
+      '#A855F7', // Purple-500
+      '#EF4444', // Red-500
+      '#22C55E', // Green-500
+      '#0891B2', // Cyan
+      '#F43F5E', // Rose
+    ];
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -467,13 +541,14 @@ function App() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">颜色</label>
               <div className="space-y-3">
-                <div className="flex gap-2 flex-wrap">
-                  {['#FF6B6B', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280', '#059669', '#DC2626', '#7C3AED'].map(color => (
+                <div className="grid grid-cols-10 gap-2">
+                  {colorPalette.map(color => (
                     <button
                       key={color}
                       onClick={() => setFormData({ ...formData, color })}
-                      className={`w-8 h-8 rounded-full transition-all ${formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
+                      className={`w-8 h-8 rounded-full transition-all ${formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-105'}`}
                       style={{ backgroundColor: color }}
+                      title={color}
                     />
                   ))}
                 </div>
@@ -614,6 +689,16 @@ function App() {
               </button>
               
               <button
+                onClick={refreshFavicons}
+                disabled={refreshingFavicons}
+                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="刷新所有图标"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshingFavicons ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline text-sm">刷新图标</span>
+              </button>
+              
+              <button
                 onClick={handleExport}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="导出配置"
@@ -632,9 +717,9 @@ function App() {
               </label>
 
               {saving && (
-                <div className="flex items-center gap-2 text-sm text-blue-600">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>保存中...</span>
+                <div className="flex items-center gap-2 text-sm text-blue-600 opacity-60">
+                  <Save className="w-4 h-4" />
+                  <span className="text-xs">已保存</span>
                 </div>
               )}
             </div>
