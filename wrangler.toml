@@ -7,6 +7,14 @@ compatibility_date = "2024-01-01"
 binding = "NAV_TILES"
 id = "619d2c0e9bc9483183dd7efe541726d9"  # Replace with your actual KV namespace ID
 
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "nav-tiles"
+database_id = "9e383ab8-a506-4655-88f4-b655399e011f"  # Replace with your actual D1 database ID
+
+
+
 # Routes (optional - can also be configured in Cloudflare dashboard)
 # route = "https://api.yourdomain.com/*"
 
