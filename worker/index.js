@@ -67,25 +67,8 @@ export default {
 // Get all tiles
 async function getTiles(env) {
   try {
-    // Try to get from D1 first
-    const result = await env.DB.prepare('SELECT data FROM tiles WHERE id = 1').first();
-    
-    let tiles;
-    if (result && result.data) {
-      tiles = JSON.parse(result.data);
-    } else {
-      // If no data in D1, check KV for migration
-      const kvData = await env.NAV_TILES.get('tiles');
-      if (kvData) {
-        tiles = JSON.parse(kvData);
-        // Migrate to D1
-        await env.DB.prepare('UPDATE tiles SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
-          .bind(JSON.stringify(tiles))
-          .run();
-      } else {
-        tiles = defaultTiles;
-      }
-    }
+    const data = await env.NAV_TILES.get('tiles');
+    const tiles = data ? JSON.parse(data) : defaultTiles;
     
     return new Response(JSON.stringify({ tiles }), {
       headers: {
