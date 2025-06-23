@@ -23,6 +23,9 @@ const API_BASE_URL = import.meta.env.DEV
   ? 'http://localhost:8787/api' 
   : 'https://nav-page-worker.baidu2.workers.dev/api';
 
+// Logo.dev API key - Replace with your actual key
+const LOGO_DEV_API_KEY = 'sk_fztJfpxvTcOoXU0Si3B4eA'; // Your secret key
+
 // Convert Chinese to Pinyin for search
 const toPinyin = (text) => {
   try {
@@ -116,7 +119,7 @@ function App() {
 
         // Test favicon sources in order
         const faviconSources = [
-          `https://img.logo.dev/${domain}?token=free`, // Logo.dev (new)
+          `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`, // Logo.dev with API key
           `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
           `https://${domain}/favicon.ico`,
           `https://icons.duckduckgo.com/ip3/${domain}.ico`,
@@ -397,7 +400,7 @@ function App() {
 
     // If cached favicon exists, try it first
     const baseFaviconSources = [
-      `https://img.logo.dev/${domain}?token=free`, // Logo.dev API (new, replacing Clearbit)
+      `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`, // Logo.dev API with secret key
       `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
       `https://${domain}/favicon.ico`,
       `https://icons.duckduckgo.com/ip3/${domain}.ico`,
@@ -443,7 +446,7 @@ function App() {
   // Tile Modal Component
   const TileModal = () => {
     const [formData, setFormData] = useState(
-      editingTile || { name: '', url: '', color: '#3B82F6', darkness: 0, customIcon: '' }
+      editingTile || { name: '', url: '', color: '#C91F37', darkness: 0, customIcon: '' }
     );
     const [showCustomIcon, setShowCustomIcon] = useState(!!formData.customIcon);
 
@@ -481,31 +484,35 @@ function App() {
       } : null;
     };
 
-    // 20 carefully selected colors for better variety
+    // 20 Traditional Chinese Colors with cultural significance
     const colorPalette = [
-      // Original colors
-      '#FF6B6B', // Red
-      '#F59E0B', // Amber
-      '#10B981', // Emerald
-      '#3B82F6', // Blue
-      '#8B5CF6', // Violet
-      '#EC4899', // Pink
-      '#6B7280', // Gray
-      '#059669', // Green
-      '#DC2626', // Red-600
-      '#7C3AED', // Purple
+      // Traditional Five Colors (五色)
+      '#C91F37', // 赤 (Chi) - Vermillion Red - happiness, celebration
+      '#FAFF72', // 黄 (Huang) - Imperial Yellow - royalty, power
+      '#41555D', // 青 (Qing) - Indigo Blue/Green - nature, spring
+      '#FFFFFF', // 白 (Bai) - White - purity, mourning
+      '#161823', // 黑 (Hei) - Black - water, winter
       
-      // New colors (10 more)
-      '#14B8A6', // Teal
-      '#F97316', // Orange
-      '#0EA5E9', // Sky
-      '#6366F1', // Indigo
-      '#84CC16', // Lime
-      '#A855F7', // Purple-500
-      '#EF4444', // Red-500
-      '#22C55E', // Green-500
-      '#0891B2', // Cyan
-      '#F43F5E', // Rose
+      // Additional Traditional Colors
+      '#FF2D51', // 朱砂 (Zhusha) - Cinnabar - auspicious, ward off evil
+      '#F05654', // 珊瑚 (Shanhu) - Coral - precious, feminine
+      '#7C4B00', // 茶色 (Chase) - Tea Brown - earth, stability
+      '#789262', // 竹青 (Zhuqing) - Bamboo Green - growth, flexibility
+      '#8B5CF6', // 紫 (Zi) - Purple - nobility, divinity
+      
+      // Nature-inspired Traditional Colors
+      '#FFB3A7', // 桃花 (Taohua) - Peach Blossom - romance, spring
+      '#B36D61', // 赭 (Zhe) - Ochre - earth, ancient pottery
+      '#0EA5E9', // 天青 (Tianqing) - Sky Blue - clarity, heaven
+      '#EACD76', // 缃 (Xiang) - Light Yellow - silk, elegance
+      '#CA6924', // 琥珀 (Hupo) - Amber - precious, time
+      
+      // Cultural Significance Colors
+      '#ED5736', // 橘红 (Juhong) - Orange Red - vitality, harvest
+      '#10B981', // 翠绿 (Cuilv) - Jade Green - prosperity, health
+      '#E4C6D0', // 藕荷 (Ouhe) - Lotus Pink - purity, enlightenment
+      '#6B7280', // 灰 (Hui) - Gray - balance, neutrality
+      '#00896C', // 松绿 (Songlv) - Pine Green - longevity, steadfastness
     ];
 
     return (
@@ -546,8 +553,15 @@ function App() {
                     <button
                       key={color}
                       onClick={() => setFormData({ ...formData, color })}
-                      className={`w-8 h-8 rounded-full transition-all ${formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-105'}`}
-                      style={{ backgroundColor: color }}
+                      className={`w-8 h-8 rounded-full transition-all border-2 ${
+                        formData.color === color 
+                          ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
+                          : 'hover:scale-105 border-transparent'
+                      }`}
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: color === '#FFFFFF' ? '#e5e7eb' : 'transparent'
+                      }}
                       title={color}
                     />
                   ))}
