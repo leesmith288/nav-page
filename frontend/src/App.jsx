@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command } from 'lucide-react';
 import pinyin from 'pinyin';
 import {
   DndContext,
@@ -45,6 +45,7 @@ function App() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [refreshingFavicons, setRefreshingFavicons] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
@@ -155,6 +156,32 @@ function App() {
     return nameMatch || urlMatch;
   });
 
+  // Keyboard shortcuts for opening tiles 1-9
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Don't trigger if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      // Ctrl/Cmd + K for command palette
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+        return;
+      }
+      
+      // Number keys 1-9 to open tiles
+      if (e.key >= '1' && e.key <= '9' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const index = parseInt(e.key) - 1;
+        if (filteredTiles[index]) {
+          window.open(filteredTiles[index].url, '_blank');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [filteredTiles]);
+
   // Handle drag end for @dnd-kit
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -252,8 +279,138 @@ function App() {
     return luminance < 0.5;
   };
 
+  // Command Palette Component
+  const CommandPalette = () => {
+    const [paletteSearch, setPaletteSearch] = useState('');
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const inputRef = useRef(null);
+
+    const paletteFilteredTiles = tiles.filter(tile => {
+      if (!paletteSearch) return true;
+      const searchLower = paletteSearch.toLowerCase();
+      const namePinyin = toPinyin(tile.name).toLowerCase();
+      const nameMatch = tile.name.toLowerCase().includes(searchLower) || namePinyin.includes(searchLower);
+      const urlMatch = tile.url.toLowerCase().includes(searchLower);
+      return nameMatch || urlMatch;
+    });
+
+    useEffect(() => {
+      if (isCommandPaletteOpen && inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, []);
+
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+          setIsCommandPaletteOpen(false);
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedIndex(prev => 
+            prev < paletteFilteredTiles.length - 1 ? prev + 1 : prev
+          );
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (paletteFilteredTiles[selectedIndex]) {
+            window.open(paletteFilteredTiles[selectedIndex].url, '_blank');
+            setIsCommandPaletteOpen(false);
+          }
+        }
+      };
+
+      if (isCommandPaletteOpen) {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }
+    }, [isCommandPaletteOpen, paletteFilteredTiles, selectedIndex]);
+
+    useEffect(() => {
+      setSelectedIndex(0);
+    }, [paletteSearch]);
+
+    if (!isCommandPaletteOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-20">
+        <div 
+          className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-4 border-b border-gray-200">
+            <div className="relative">
+              <Command className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={paletteSearch}
+                onChange={(e) => setPaletteSearch(e.target.value)}
+                placeholder="输入搜索或按 ESC 退出..."
+                className="w-full pl-10 pr-4 py-3 text-lg focus:outline-none"
+              />
+            </div>
+          </div>
+          
+          <div className="max-h-96 overflow-y-auto">
+            {paletteFilteredTiles.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                没有找到匹配的磁贴
+              </div>
+            ) : (
+              <div className="py-2">
+                {paletteFilteredTiles.map((tile, index) => (
+                  <div
+                    key={tile.id}
+                    className={`px-4 py-3 cursor-pointer flex items-center gap-3 ${
+                      index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      window.open(tile.url, '_blank');
+                      setIsCommandPaletteOpen(false);
+                    }}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                  >
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0"
+                      style={{ backgroundColor: `${tile.color}15` }}
+                    >
+                      <FaviconImage 
+                        url={tile.url} 
+                        name={tile.name} 
+                        color={tile.color}
+                        customIcon={tile.customIcon}
+                        cachedFavicon={tile.cachedFavicon}
+                        size="small"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{tile.name}</div>
+                      <div className="text-sm text-gray-500 truncate">{tile.url}</div>
+                    </div>
+                    {index < 9 && (
+                      <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="p-3 border-t border-gray-200 text-xs text-gray-500 flex justify-between">
+            <span>↑↓ 导航 · Enter 打开 · ESC 退出</span>
+            <span>Ctrl+K 打开命令面板</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Sortable Tile Component
-  function SortableTile({ tile }) {
+  function SortableTile({ tile, index }) {
     const {
       attributes,
       listeners,
@@ -304,6 +461,13 @@ function App() {
             }
           }}
         >
+          {/* Keyboard shortcut indicator */}
+          {index < 9 && (
+            <div className="absolute top-2 left-2 w-6 h-6 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+              {index + 1}
+            </div>
+          )}
+
           {/* External link indicator */}
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <ExternalLink className="w-4 h-4 text-gray-400" />
@@ -364,7 +528,7 @@ function App() {
   }
 
   // Enhanced favicon component with custom icon support
-  const FaviconImage = ({ url, name, color, customIcon, cachedFavicon }) => {
+  const FaviconImage = ({ url, name, color, customIcon, cachedFavicon, size = 'normal' }) => {
     const [currentSrc, setCurrentSrc] = useState(0);
     const [hasError, setHasError] = useState(false);
     
@@ -376,13 +540,16 @@ function App() {
       }
     })();
 
+    const sizeClass = size === 'small' ? 'w-6 h-6' : 'w-12 h-12';
+    const iconSizeClass = size === 'small' ? 'w-5 h-5' : 'w-10 h-10';
+
     // If custom icon is provided, use it directly
     if (customIcon) {
       return (
         <img 
           src={customIcon}
           alt={name}
-          className="w-12 h-12 object-contain"
+          className={`${sizeClass} object-contain`}
           onError={() => setHasError(true)}
           loading="lazy"
           style={{
@@ -415,7 +582,7 @@ function App() {
     if (hasError || !domain) {
       return (
         <Globe 
-          className="w-10 h-10"
+          className={iconSizeClass}
           style={{ color: color }}
         />
       );
@@ -425,7 +592,7 @@ function App() {
       <img 
         src={faviconSources[currentSrc]}
         alt={name}
-        className="w-12 h-12 object-contain"
+        className={`${sizeClass} object-contain`}
         onError={handleError}
         loading="lazy"
         style={{
@@ -818,10 +985,11 @@ function App() {
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {filteredTiles.map((tile) => (
+                {filteredTiles.map((tile, index) => (
                   <SortableTile
                     key={tile.id}
                     tile={tile}
+                    index={index}
                   />
                 ))}
               </div>
@@ -830,8 +998,23 @@ function App() {
         )}
       </div>
 
+      {/* Keyboard shortcuts hint */}
+      <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 text-sm text-gray-600 opacity-90">
+        <div className="flex items-center gap-2 mb-1">
+          <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">1-9</kbd>
+          <span>快速打开磁贴</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl+K</kbd>
+          <span>搜索并启动</span>
+        </div>
+      </div>
+
       {/* Add/Edit Modal */}
       {isAddModalOpen && <TileModal />}
+      
+      {/* Command Palette */}
+      <CommandPalette />
       
       {/* Footer */}
       <div className="text-center py-4 text-sm text-gray-500">
