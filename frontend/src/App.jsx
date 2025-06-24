@@ -23,9 +23,6 @@ const API_BASE_URL = import.meta.env.DEV
   ? 'http://localhost:8787/api' 
   : 'https://nav-page-worker.baidu2.workers.dev/api';
 
-// Logo.dev API key - Replace with your actual key
-const LOGO_DEV_API_KEY = 'sk_fztJfpxvTcOoXU0Si3B4eA'; // Your secret key
-
 // Convert Chinese to Pinyin for search
 const toPinyin = (text) => {
   try {
@@ -119,10 +116,8 @@ function App() {
 
         // Test favicon sources in order
         const faviconSources = [
-          `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`, // Logo.dev with API key
           `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
           `https://${domain}/favicon.ico`,
-          `https://icons.duckduckgo.com/ip3/${domain}.ico`,
         ];
 
         for (const src of faviconSources) {
@@ -400,10 +395,8 @@ function App() {
 
     // If cached favicon exists, try it first
     const baseFaviconSources = [
-      `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`, // Logo.dev API with secret key
       `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
       `https://${domain}/favicon.ico`,
-      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
     ];
 
     // Put cached favicon at the beginning if it exists
@@ -446,9 +439,38 @@ function App() {
   // Tile Modal Component
   const TileModal = () => {
     const [formData, setFormData] = useState(
-      editingTile || { name: '', url: '', color: '#C91F37', darkness: 0, customIcon: '' }
+      editingTile || { name: '', url: '', color: '#BE002F', darkness: 0, customIcon: '' }
     );
     const [showCustomIcon, setShowCustomIcon] = useState(!!formData.customIcon);
+    const [customColor, setCustomColor] = useState('');
+    const [colorError, setColorError] = useState('');
+
+    // Default colors
+    const defaultColors = [
+      '#BE002F', // Red
+      '#FF0097', // Pink
+      '#FA8C35', // Orange
+      '#D9B611', // Yellow
+      '#2ADD9C', // Green
+    ];
+
+    // Validate hex color
+    const isValidHexColor = (color) => {
+      return /^#[0-9A-F]{6}$/i.test(color);
+    };
+
+    // Handle custom color input
+    const handleCustomColorSubmit = () => {
+      const cleanedColor = customColor.startsWith('#') ? customColor : `#${customColor}`;
+      
+      if (isValidHexColor(cleanedColor)) {
+        setFormData({ ...formData, color: cleanedColor.toUpperCase() });
+        setCustomColor('');
+        setColorError('');
+      } else {
+        setColorError('请输入有效的颜色代码，如 #9B4400');
+      }
+    };
 
     // Generate background style based on darkness
     const getPreviewStyle = () => {
@@ -484,37 +506,6 @@ function App() {
       } : null;
     };
 
-    // 20 Traditional Chinese Colors with cultural significance
-    const colorPalette = [
-      // Traditional Five Colors (五色)
-      '#C91F37', // 赤 (Chi) - Vermillion Red - happiness, celebration
-      '#FAFF72', // 黄 (Huang) - Imperial Yellow - royalty, power
-      '#41555D', // 青 (Qing) - Indigo Blue/Green - nature, spring
-      '#FFFFFF', // 白 (Bai) - White - purity, mourning
-      '#161823', // 黑 (Hei) - Black - water, winter
-      
-      // Additional Traditional Colors
-      '#FF2D51', // 朱砂 (Zhusha) - Cinnabar - auspicious, ward off evil
-      '#F05654', // 珊瑚 (Shanhu) - Coral - precious, feminine
-      '#7C4B00', // 茶色 (Chase) - Tea Brown - earth, stability
-      '#789262', // 竹青 (Zhuqing) - Bamboo Green - growth, flexibility
-      '#8B5CF6', // 紫 (Zi) - Purple - nobility, divinity
-      
-      // Nature-inspired Traditional Colors
-      '#FFB3A7', // 桃花 (Taohua) - Peach Blossom - romance, spring
-      '#B36D61', // 赭 (Zhe) - Ochre - earth, ancient pottery
-      '#0EA5E9', // 天青 (Tianqing) - Sky Blue - clarity, heaven
-      '#EACD76', // 缃 (Xiang) - Light Yellow - silk, elegance
-      '#CA6924', // 琥珀 (Hupo) - Amber - precious, time
-      
-      // Cultural Significance Colors
-      '#ED5736', // 橘红 (Juhong) - Orange Red - vitality, harvest
-      '#10B981', // 翠绿 (Cuilv) - Jade Green - prosperity, health
-      '#E4C6D0', // 藕荷 (Ouhe) - Lotus Pink - purity, enlightenment
-      '#6B7280', // 灰 (Hui) - Gray - balance, neutrality
-      '#00896C', // 松绿 (Songlv) - Pine Green - longevity, steadfastness
-    ];
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -548,23 +539,61 @@ function App() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">颜色</label>
               <div className="space-y-3">
-                <div className="grid grid-cols-10 gap-2">
-                  {colorPalette.map(color => (
+                {/* Default colors */}
+                <div className="flex gap-2 mb-3">
+                  {defaultColors.map(color => (
                     <button
                       key={color}
                       onClick={() => setFormData({ ...formData, color })}
-                      className={`w-8 h-8 rounded-full transition-all border-2 ${
+                      className={`w-10 h-10 rounded-lg transition-all border-2 ${
                         formData.color === color 
                           ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
                           : 'hover:scale-105 border-transparent'
                       }`}
                       style={{ 
                         backgroundColor: color,
-                        borderColor: color === '#FFFFFF' ? '#e5e7eb' : 'transparent'
                       }}
                       title={color}
                     />
                   ))}
+                </div>
+
+                {/* Custom color input */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={customColor}
+                      onChange={(e) => {
+                        setCustomColor(e.target.value);
+                        setColorError('');
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleCustomColorSubmit();
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="输入颜色代码，如 #9B4400"
+                    />
+                    <button
+                      onClick={handleCustomColorSubmit}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      应用
+                    </button>
+                  </div>
+                  {colorError && (
+                    <p className="text-sm text-red-500">{colorError}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>当前颜色：</span>
+                    <div 
+                      className="w-6 h-6 rounded border border-gray-300" 
+                      style={{ backgroundColor: formData.color }}
+                    />
+                    <span className="font-mono">{formData.color}</span>
+                  </div>
                 </div>
                 
                 {/* Darkness slider */}
