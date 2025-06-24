@@ -284,6 +284,8 @@ function App() {
     const [paletteSearch, setPaletteSearch] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef(null);
+    const scrollRef = useRef(null);
+    const itemRefs = useRef([]);
 
     const paletteFilteredTiles = tiles.filter(tile => {
       if (!paletteSearch) return true;
@@ -299,6 +301,25 @@ function App() {
         inputRef.current.focus();
       }
     }, []);
+
+    // Scroll to selected item when using keyboard navigation
+    useEffect(() => {
+      if (itemRefs.current[selectedIndex] && scrollRef.current) {
+        const item = itemRefs.current[selectedIndex];
+        const container = scrollRef.current;
+        
+        const itemTop = item.offsetTop;
+        const itemBottom = itemTop + item.offsetHeight;
+        const containerTop = container.scrollTop;
+        const containerBottom = containerTop + container.clientHeight;
+        
+        if (itemTop < containerTop) {
+          container.scrollTop = itemTop;
+        } else if (itemBottom > containerBottom) {
+          container.scrollTop = itemBottom - container.clientHeight;
+        }
+      }
+    }, [selectedIndex]);
 
     useEffect(() => {
       const handleKeyDown = (e) => {
@@ -329,6 +350,7 @@ function App() {
 
     useEffect(() => {
       setSelectedIndex(0);
+      itemRefs.current = [];
     }, [paletteSearch]);
 
     if (!isCommandPaletteOpen) return null;
@@ -353,7 +375,7 @@ function App() {
             </div>
           </div>
           
-          <div className="max-h-96 overflow-y-auto">
+          <div ref={scrollRef} className="max-h-96 overflow-y-auto">
             {paletteFilteredTiles.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 没有找到匹配的磁贴
@@ -363,6 +385,7 @@ function App() {
                 {paletteFilteredTiles.map((tile, index) => (
                   <div
                     key={tile.id}
+                    ref={el => itemRefs.current[index] = el}
                     className={`px-4 py-3 cursor-pointer flex items-center gap-3 ${
                       index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                     }`}
@@ -996,18 +1019,6 @@ function App() {
             </SortableContext>
           </DndContext>
         )}
-      </div>
-
-      {/* Keyboard shortcuts hint */}
-      <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 text-sm text-gray-600 opacity-90">
-        <div className="flex items-center gap-2 mb-1">
-          <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">1-9</kbd>
-          <span>快速打开磁贴</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl+K</kbd>
-          <span>搜索并启动</span>
-        </div>
       </div>
 
       {/* Add/Edit Modal */}
