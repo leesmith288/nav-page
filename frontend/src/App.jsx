@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command, Layers, Palette, X, Check, Sparkles } from 'lucide-react';
 import pinyin from 'pinyin';
 import {
   DndContext,
@@ -36,6 +36,1355 @@ const toPinyin = (text) => {
   }
 };
 
+// Domain to color mapping database
+const domainColorMap = {
+  // Social & Communication
+  'facebook.com': '#FF0097',
+  'twitter.com': '#FF0097',
+  'instagram.com': '#FF0097',
+  'linkedin.com': '#FF0097',
+  'whatsapp.com': '#FF0097',
+  'telegram.org': '#FF0097',
+  'discord.com': '#FF0097',
+  'slack.com': '#FF0097',
+  
+  // Development & Code
+  'github.com': '#0066CC',
+  'gitlab.com': '#0066CC',
+  'stackoverflow.com': '#0066CC',
+  'npmjs.com': '#0066CC',
+  'vercel.com': '#0066CC',
+  'netlify.com': '#0066CC',
+  'codepen.io': '#0066CC',
+  'codesandbox.io': '#0066CC',
+  
+  // Productivity & Work
+  'notion.so': '#FA8C35',
+  'trello.com': '#FA8C35',
+  'asana.com': '#FA8C35',
+  'monday.com': '#FA8C35',
+  'figma.com': '#FA8C35',
+  'miro.com': '#FA8C35',
+  'airtable.com': '#FA8C35',
+  'clickup.com': '#FA8C35',
+  
+  // Learning & Documentation
+  'wikipedia.org': '#D9B611',
+  'coursera.org': '#D9B611',
+  'udemy.com': '#D9B611',
+  'medium.com': '#D9B611',
+  'developer.mozilla.org': '#D9B611',
+  'w3schools.com': '#D9B611',
+  'stackoverflow.com': '#D9B611',
+  
+  // Entertainment
+  'youtube.com': '#2ADD9C',
+  'netflix.com': '#2ADD9C',
+  'spotify.com': '#2ADD9C',
+  'twitch.tv': '#2ADD9C',
+  'reddit.com': '#2ADD9C',
+  'pinterest.com': '#2ADD9C',
+  
+  // Important & Finance
+  'gmail.com': '#BE002F',
+  'outlook.com': '#BE002F',
+  'paypal.com': '#BE002F',
+  'stripe.com': '#BE002F',
+  'chase.com': '#BE002F',
+  'bankofamerica.com': '#BE002F',
+};
+
+// Keyword to color mapping
+const keywordColorMap = {
+  // Keywords for different categories
+  social: '#FF0097',
+  chat: '#FF0097',
+  message: '#FF0097',
+  
+  code: '#0066CC',
+  dev: '#0066CC',
+  api: '#0066CC',
+  git: '#0066CC',
+  
+  work: '#FA8C35',
+  task: '#FA8C35',
+  project: '#FA8C35',
+  design: '#FA8C35',
+  
+  learn: '#D9B611',
+  doc: '#D9B611',
+  guide: '#D9B611',
+  tutorial: '#D9B611',
+  
+  video: '#2ADD9C',
+  music: '#2ADD9C',
+  game: '#2ADD9C',
+  play: '#2ADD9C',
+  
+  bank: '#BE002F',
+  pay: '#BE002F',
+  mail: '#BE002F',
+  important: '#BE002F',
+};
+
+// Color information
+const colorInfo = {
+  '#BE002F': { name: '重要事项', emoji: '🔴', description: '工作、银行、紧急' },
+  '#FF0097': { name: '社交通讯', emoji: '💬', description: '社交媒体、聊天、邮件' },
+  '#FA8C35': { name: '生产力工具', emoji: '🛠️', description: '笔记、任务、开发工具' },
+  '#D9B611': { name: '学习资源', emoji: '📚', description: '文档、教程、参考' },
+  '#2ADD9C': { name: '娱乐休闲', emoji: '🎮', description: '视频、音乐、游戏' },
+  '#0066CC': { name: '开发编程', emoji: '💻', description: '代码、开发、技术' },
+};
+
+// Helper function to convert hex to RGB
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+};
+
+// Helper function to determine if a color is dark
+const isColorDark = (color, darkness = 0) => {
+  const rgb = hexToRgb(color);
+  if (!rgb) return false;
+  
+  const adjustedR = rgb.r * (1 - darkness / 100) + 255 * (darkness / 100);
+  const adjustedG = rgb.g * (1 - darkness / 100) + 255 * (darkness / 100);
+  const adjustedB = rgb.b * (1 - darkness / 100) + 255 * (darkness / 100);
+  
+  const luminance = (0.299 * adjustedR + 0.587 * adjustedG + 0.114 * adjustedB) / 255;
+  return luminance < 0.5;
+};
+
+// Helper function to convert hex to hue
+const hexToHue = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0;
+  
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const diff = max - min;
+  
+  if (diff === 0) return 0;
+  
+  let hue;
+  if (max === r) {
+    hue = ((g - b) / diff + (g < b ? 6 : 0)) / 6;
+  } else if (max === g) {
+    hue = ((b - r) / diff + 2) / 6;
+  } else {
+    hue = ((r - g) / diff + 4) / 6;
+  }
+  
+  return hue * 360;
+};
+
+// Smart color suggestion function
+const suggestColor = (url, name, existingTiles) => {
+  const suggestions = [];
+  
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    
+    // 1. Check direct domain match
+    if (domainColorMap[domain]) {
+      suggestions.push({
+        color: domainColorMap[domain],
+        reason: '基于网站类型',
+        confidence: 0.9
+      });
+    }
+    
+    // 2. Check domain keywords
+    const domainParts = domain.split('.');
+    for (const part of domainParts) {
+      for (const [keyword, color] of Object.entries(keywordColorMap)) {
+        if (part.includes(keyword)) {
+          suggestions.push({
+            color,
+            reason: `包含关键词 "${keyword}"`,
+            confidence: 0.7
+          });
+          break;
+        }
+      }
+    }
+    
+    // 3. Check name keywords
+    const nameLower = name.toLowerCase();
+    for (const [keyword, color] of Object.entries(keywordColorMap)) {
+      if (nameLower.includes(keyword)) {
+        suggestions.push({
+          color,
+          reason: `名称包含 "${keyword}"`,
+          confidence: 0.6
+        });
+      }
+    }
+    
+    // 4. Similar sites analysis
+    const similarSites = existingTiles.filter(tile => {
+      try {
+        const tileDomain = new URL(tile.url).hostname.replace('www.', '');
+        return tileDomain.includes(domainParts[0]) || 
+               domainParts[0].includes(tileDomain.split('.')[0]);
+      } catch {
+        return false;
+      }
+    });
+    
+    if (similarSites.length > 0) {
+      const colorCounts = similarSites.reduce((acc, tile) => {
+        acc[tile.color] = (acc[tile.color] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const mostUsedColor = Object.entries(colorCounts)
+        .sort(([, a], [, b]) => b - a)[0];
+      
+      if (mostUsedColor) {
+        suggestions.push({
+          color: mostUsedColor[0],
+          reason: '类似网站使用此颜色',
+          confidence: 0.5
+        });
+      }
+    }
+    
+  } catch (error) {
+    // Invalid URL, no suggestions
+  }
+  
+  // Remove duplicates and sort by confidence
+  const uniqueSuggestions = suggestions
+    .filter((s, i, arr) => 
+      arr.findIndex(x => x.color === s.color) === i
+    )
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 3); // Top 3 suggestions
+  
+  return uniqueSuggestions;
+};
+
+// Color Filter Component
+const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset }) => {
+  // Group tiles by color and count
+  const colorGroups = tiles.reduce((acc, tile) => {
+    const color = tile.color.toUpperCase();
+    acc[color] = (acc[color] || 0) + 1;
+    return acc;
+  }, {});
+
+  const isAllSelected = activeColors.length === 0;
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-lg">
+      {/* All filter */}
+      <button
+        onClick={onReset}
+        className={`
+          px-3 py-1.5 rounded-full text-sm font-medium transition-all
+          ${isAllSelected 
+            ? 'bg-gray-900 text-white' 
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }
+        `}
+      >
+        全部
+      </button>
+
+      <div className="w-px h-6 bg-gray-300" />
+
+      {/* Color filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {Object.entries(colorGroups).map(([color, count]) => {
+          const isActive = activeColors.includes(color);
+          const meaning = colorInfo[color];
+          
+          return (
+            <button
+              key={color}
+              onClick={() => onColorToggle(color)}
+              className={`
+                group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                transition-all duration-200 transform
+                ${isActive 
+                  ? 'scale-105 shadow-lg' 
+                  : 'hover:scale-105 hover:shadow-md'
+                }
+              `}
+              style={{
+                backgroundColor: isActive ? color : `${color}20`,
+                border: `2px solid ${isActive ? color : 'transparent'}`,
+              }}
+            >
+              {/* Color dot */}
+              <div 
+                className="w-4 h-4 rounded-full shadow-sm"
+                style={{ backgroundColor: color }}
+              />
+              
+              {/* Count */}
+              <span 
+                className={`
+                  text-xs font-medium
+                  ${isActive ? 'text-white' : 'text-gray-700'}
+                `}
+                style={{
+                  color: isActive && isColorDark(color) ? 'white' : 
+                         isActive ? 'black' : 
+                         undefined
+                }}
+              >
+                {count}
+              </span>
+
+              {/* Tooltip */}
+              {meaning && (
+                <div className="
+                  absolute -top-8 left-1/2 transform -translate-x-1/2
+                  bg-gray-900 text-white text-xs px-2 py-1 rounded
+                  opacity-0 group-hover:opacity-100 transition-opacity
+                  pointer-events-none whitespace-nowrap z-10
+                ">
+                  {meaning.emoji} {meaning.name}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active filter indicator */}
+      {activeColors.length > 0 && (
+        <>
+          <div className="w-px h-6 bg-gray-300" />
+          <span className="text-sm text-gray-500">
+            {activeColors.length} 个颜色筛选
+          </span>
+        </>
+      )}
+    </div>
+  );
+};
+
+// View Mode Toggle Component
+const ViewModeToggle = ({ mode, onChange }) => {
+  const modes = [
+    { id: 'grid', icon: Grid, label: '网格视图' },
+    { id: 'grouped', icon: Layers, label: '分组视图' },
+    { id: 'rainbow', icon: Palette, label: '彩虹视图' },
+  ];
+
+  return (
+    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+      {modes.map(({ id, icon: Icon, label }) => (
+        <button
+          key={id}
+          onClick={() => onChange(id)}
+          className={`
+            flex items-center gap-2 px-3 py-1.5 rounded-md
+            transition-all duration-200
+            ${mode === id 
+              ? 'bg-white shadow-sm text-gray-900' 
+              : 'text-gray-600 hover:text-gray-900'
+            }
+          `}
+          title={label}
+        >
+          <Icon className="w-4 h-4" />
+          <span className="hidden sm:inline text-sm">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Enhanced favicon component with custom icon support
+const FaviconImage = ({ url, name, color, customIcon, cachedFavicon, size = 'normal' }) => {
+  const [currentSrc, setCurrentSrc] = useState(0);
+  const [hasError, setHasError] = useState(false);
+  
+  const domain = (() => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  })();
+
+  const sizeClass = size === 'small' ? 'w-6 h-6' : 'w-12 h-12';
+  const iconSizeClass = size === 'small' ? 'w-5 h-5' : 'w-10 h-10';
+
+  // If custom icon is provided, use it directly
+  if (customIcon) {
+    return (
+      <img 
+        src={customIcon}
+        alt={name}
+        className={`${sizeClass} object-contain`}
+        onError={() => setHasError(true)}
+        loading="lazy"
+        style={{
+          WebkitImageRendering: '-webkit-optimize-contrast',
+          imageRendering: 'crisp-edges',
+        }}
+      />
+    );
+  }
+
+  // If cached favicon exists, try it first
+  const baseFaviconSources = [
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+    `https://${domain}/favicon.ico`,
+  ];
+
+  // Put cached favicon at the beginning if it exists
+  const faviconSources = cachedFavicon 
+    ? [cachedFavicon, ...baseFaviconSources.filter(src => src !== cachedFavicon)]
+    : baseFaviconSources;
+
+  const handleError = () => {
+    if (currentSrc < faviconSources.length - 1) {
+      setCurrentSrc(currentSrc + 1);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (hasError || !domain) {
+    return (
+      <Globe 
+        className={iconSizeClass}
+        style={{ color: color }}
+      />
+    );
+  }
+
+  return (
+    <img 
+      src={faviconSources[currentSrc]}
+      alt={name}
+      className={`${sizeClass} object-contain`}
+      onError={handleError}
+      loading="lazy"
+      style={{
+        WebkitImageRendering: '-webkit-optimize-contrast',
+        imageRendering: 'crisp-edges',
+      }}
+    />
+  );
+};
+
+// Grouped View Component
+const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
+  // Group tiles by color
+  const colorGroups = tiles.reduce((acc, tile) => {
+    const color = tile.color.toUpperCase();
+    if (!acc[color]) acc[color] = [];
+    acc[color].push(tile);
+    return acc;
+  }, {});
+
+  // Sort groups by number of tiles (popular colors first)
+  const sortedGroups = Object.entries(colorGroups)
+    .sort(([, a], [, b]) => b.length - a.length);
+
+  return (
+    <div className="space-y-8">
+      {sortedGroups.map(([color, groupTiles]) => {
+        const info = colorInfo[color] || { 
+          name: '其他', 
+          emoji: '🔷', 
+          description: `${color}` 
+        };
+
+        return (
+          <div key={color} className="relative animate-fadeIn">
+            {/* Section Header */}
+            <div className="mb-4 flex items-center gap-3">
+              {/* Color indicator line */}
+              <div 
+                className="h-1 w-12 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              
+              {/* Section title */}
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{info.emoji}</span>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {info.name}
+                </h3>
+                <span className="text-sm text-gray-500">
+                  ({groupTiles.length})
+                </span>
+              </div>
+              
+              {/* Description */}
+              <span className="text-sm text-gray-500 hidden md:inline">
+                {info.description}
+              </span>
+            </div>
+
+            {/* Tiles Grid for this color */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {groupTiles.map((tile, index) => (
+                <div
+                  key={tile.id}
+                  className="relative group animate-fadeIn"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div
+                    className="block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group transition-all duration-300 cursor-pointer"
+                    style={{
+                      borderTop: `4px solid ${tile.color}`,
+                      ...(tile.darkness > 0 && {
+                        backgroundColor: (() => {
+                          const rgb = hexToRgb(tile.color);
+                          if (rgb) {
+                            const alpha = tile.darkness / 100;
+                            return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                          }
+                          return 'white';
+                        })()
+                      })
+                    }}
+                    onClick={() => window.open(tile.url, '_blank')}
+                  >
+                    {/* External link indicator */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <ExternalLink className="w-4 h-4 text-gray-400" />
+                    </div>
+                    
+                    {/* Large Favicon */}
+                    <div className="flex items-center justify-center mb-3">
+                      <div 
+                        className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+                        style={{ backgroundColor: `${tile.color}15` }}
+                      >
+                        <FaviconImage 
+                          url={tile.url} 
+                          name={tile.name} 
+                          color={tile.color}
+                          customIcon={tile.customIcon}
+                          cachedFavicon={tile.cachedFavicon}
+                        />
+                      </div>
+                    </div>
+                    
+                    <h3 className={`text-sm font-medium text-center truncate px-1 ${
+                      tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+                    }`}>
+                      {tile.name}
+                    </h3>
+
+                    {/* Edit/Delete buttons */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditTile(tile);
+                        }}
+                        className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteTile(tile.id);
+                        }}
+                        className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Rainbow View Component (tiles sorted by hue)
+const RainbowTileView = ({ tiles, onEditTile, onDeleteTile }) => {
+  // Convert hex to HSL and sort by hue
+  const sortedTiles = [...tiles].sort((a, b) => {
+    const hueA = hexToHue(a.color);
+    const hueB = hexToHue(b.color);
+    return hueA - hueB;
+  });
+
+  return (
+    <div className="relative">
+      {/* Rainbow gradient background */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
+        <div className="h-full w-full rounded-lg" style={{
+          background: 'linear-gradient(90deg, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #0000ff, #8800ff)'
+        }} />
+      </div>
+      
+      {/* Tiles in rainbow order */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 relative">
+        {sortedTiles.map((tile, index) => (
+          <div
+            key={tile.id}
+            className="relative group animate-slideIn"
+            style={{ 
+              animationDelay: `${index * 30}ms`,
+              animationFillMode: 'backwards'
+            }}
+          >
+            <div
+              className="block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group transition-all duration-300 cursor-pointer"
+              style={(() => {
+                if (!tile.darkness || tile.darkness === 0) {
+                  return {
+                    borderTop: `4px solid ${tile.color}`,
+                  };
+                }
+                
+                const rgb = hexToRgb(tile.color);
+                if (rgb) {
+                  const alpha = tile.darkness / 100;
+                  return {
+                    backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+                    borderTop: `4px solid ${tile.color}`,
+                  };
+                }
+                
+                return {
+                  borderTop: `4px solid ${tile.color}`,
+                };
+              })()}
+              onClick={(e) => {
+                if (!e.target.closest('button') && !e.ctrlKey && !e.metaKey) {
+                  window.open(tile.url, '_blank');
+                }
+              }}
+            >
+              {/* Keyboard shortcut indicator */}
+              {index < 9 && (
+                <div className="absolute top-2 left-2 w-6 h-6 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                  {index + 1}
+                </div>
+              )}
+
+              {/* External link indicator */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <ExternalLink className="w-4 h-4 text-gray-400" />
+              </div>
+              
+              {/* Large Favicon */}
+              <div className="flex items-center justify-center mb-3">
+                <div 
+                  className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+                  style={{ backgroundColor: `${tile.color}15` }}
+                >
+                  <FaviconImage 
+                    url={tile.url} 
+                    name={tile.name} 
+                    color={tile.color}
+                    customIcon={tile.customIcon}
+                    cachedFavicon={tile.cachedFavicon}
+                  />
+                </div>
+              </div>
+              
+              {/* Title with dynamic color based on background darkness */}
+              <h3 
+                className={`text-sm font-medium text-center truncate px-1 ${
+                  tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+                }`}
+              >
+                {tile.name}
+              </h3>
+
+              {/* Edit/Delete Buttons */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEditTile(tile);
+                  }}
+                  className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDeleteTile(tile.id);
+                  }}
+                  className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Color Picker with Smart Suggestions
+const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles }) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [customColor, setCustomColor] = useState('');
+  const [colorError, setColorError] = useState('');
+  
+  // Generate suggestions when URL or name changes
+  useEffect(() => {
+    if (url && name) {
+      const colorSuggestions = suggestColor(url, name, existingTiles);
+      setSuggestions(colorSuggestions);
+      setShowSuggestions(true);
+    }
+  }, [url, name, existingTiles]);
+  
+  const defaultColors = [
+    '#BE002F', '#FF0097', '#FA8C35', '#D9B611', '#2ADD9C', '#0066CC'
+  ];
+  
+  // Validate hex color
+  const isValidHexColor = (color) => {
+    return /^#[0-9A-F]{6}$/i.test(color);
+  };
+
+  // Handle custom color input
+  const handleCustomColorSubmit = () => {
+    const cleanedColor = customColor.startsWith('#') ? customColor : `#${customColor}`;
+    
+    if (isValidHexColor(cleanedColor)) {
+      setFormData({ ...formData, color: cleanedColor.toUpperCase() });
+      setCustomColor('');
+      setColorError('');
+    } else {
+      setColorError('请输入有效的颜色代码，如 #9B4400');
+    }
+  };
+  
+  return (
+    <div>
+      {/* Smart Suggestions */}
+      {suggestions.length > 0 && showSuggestions && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-blue-900 flex items-center gap-1">
+              <Sparkles className="w-4 h-4" />
+              智能推荐
+            </span>
+            <button
+              onClick={() => setShowSuggestions(false)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="space-y-2">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => setFormData({ ...formData, color: suggestion.color })}
+                className={`
+                  w-full flex items-center gap-3 p-2 rounded-lg
+                  transition-all hover:bg-white/80
+                  ${formData.color === suggestion.color 
+                    ? 'bg-white shadow-sm ring-2 ring-blue-400' 
+                    : 'bg-white/50'
+                  }
+                `}
+              >
+                <div 
+                  className="w-8 h-8 rounded-lg shadow-sm"
+                  style={{ backgroundColor: suggestion.color }}
+                />
+                <div className="flex-1 text-left">
+                  <div className="text-sm font-medium text-gray-800">
+                    {suggestion.reason}
+                  </div>
+                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                    <span>置信度:</span>
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            i < Math.round(suggestion.confidence * 5)
+                              ? 'bg-blue-400'
+                              : 'bg-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {formData.color === suggestion.color && (
+                  <Check className="w-4 h-4 text-blue-600" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Default colors */}
+      <div className="space-y-3">
+        <div className="flex gap-2 mb-3">
+          {defaultColors.map(color => (
+            <button
+              key={color}
+              onClick={() => setFormData({ ...formData, color })}
+              className={`w-10 h-10 rounded-lg transition-all border-2 ${
+                formData.color === color 
+                  ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
+                  : 'hover:scale-105 border-transparent'
+              }`}
+              style={{ 
+                backgroundColor: color,
+              }}
+              title={colorInfo[color]?.name || color}
+            />
+          ))}
+        </div>
+
+        {/* Custom color input */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={customColor}
+              onChange={(e) => {
+                setCustomColor(e.target.value);
+                setColorError('');
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleCustomColorSubmit();
+                }
+              }}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="输入颜色代码，如 #9B4400"
+            />
+            <button
+              onClick={handleCustomColorSubmit}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              应用
+            </button>
+          </div>
+          {colorError && (
+            <p className="text-sm text-red-500">{colorError}</p>
+          )}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>当前颜色：</span>
+            <div 
+              className="w-6 h-6 rounded border border-gray-300" 
+              style={{ backgroundColor: formData.color }}
+            />
+            <span className="font-mono">{formData.color}</span>
+          </div>
+        </div>
+        
+        {/* Darkness slider */}
+        <div>
+          <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+            <span>背景深度</span>
+            <span>{formData.darkness || 0}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            value={formData.darkness || 0}
+            onChange={(e) => setFormData({ ...formData, darkness: parseInt(e.target.value) })}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #e5e7eb 0%, ${formData.color} ${formData.darkness || 0}%, #e5e7eb ${formData.darkness || 0}%)`
+            }}
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>0% (仅顶部)</span>
+            <span>100% (全彩)</span>
+          </div>
+        </div>
+        
+        {/* Preview */}
+        <div className="mt-3">
+          <p className="text-sm text-gray-600 mb-2">预览效果：</p>
+          <div 
+            className="w-24 h-24 rounded-xl shadow-sm mx-auto transition-all duration-300"
+            style={(() => {
+              if (!formData.darkness || formData.darkness === 0) {
+                return {
+                  backgroundColor: 'white',
+                  borderTop: `4px solid ${formData.color}`,
+                };
+              }
+              
+              const alpha = formData.darkness / 100;
+              const rgb = hexToRgb(formData.color);
+              if (rgb) {
+                return {
+                  backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+                  borderTop: `4px solid ${formData.color}`,
+                };
+              }
+              
+              return {
+                backgroundColor: 'white',
+                borderTop: `4px solid ${formData.color}`,
+              };
+            })()}
+          >
+            <div className="h-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Tile Modal Component
+const TileModal = ({ isOpen, onClose, editingTile, onSave, existingTiles }) => {
+  const [formData, setFormData] = useState(
+    editingTile || { name: '', url: '', color: '#BE002F', darkness: 0, customIcon: '' }
+  );
+  const [showCustomIcon, setShowCustomIcon] = useState(!!formData.customIcon);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">
+          {editingTile ? '编辑磁贴' : '添加新磁贴'}
+        </h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">名称</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：Google"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">网址</label>
+            <input
+              type="url"
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://example.com"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">颜色</label>
+            <EnhancedColorPicker
+              formData={formData}
+              setFormData={setFormData}
+              url={formData.url}
+              name={formData.name}
+              existingTiles={existingTiles}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">自定义图标</label>
+              <button
+                type="button"
+                onClick={() => setShowCustomIcon(!showCustomIcon)}
+                className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1"
+              >
+                <Image className="w-4 h-4" />
+                {showCustomIcon ? '隐藏' : '设置'}
+              </button>
+            </div>
+            
+            {showCustomIcon && (
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={formData.customIcon || ''}
+                  onChange={(e) => setFormData({ ...formData, customIcon: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://example.com/icon.png"
+                />
+                <p className="text-xs text-gray-500">
+                  输入图标的完整URL地址，支持 PNG、JPG、SVG 等格式
+                </p>
+                {formData.customIcon && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg flex items-center gap-3">
+                    <span className="text-sm text-gray-600">预览：</span>
+                    <img 
+                      src={formData.customIcon} 
+                      alt="Icon preview" 
+                      className="w-10 h-10 object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <span className="hidden text-sm text-red-500">图标加载失败</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => onSave(formData)}
+            disabled={!formData.name || !formData.url}
+            className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            保存
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Command Palette Component
+const CommandPalette = ({ isOpen, onClose, tiles }) => {
+  const [paletteSearch, setPaletteSearch] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isKeyboardNav, setIsKeyboardNav] = useState(false);
+  const inputRef = useRef(null);
+  const scrollRef = useRef(null);
+
+  const paletteFilteredTiles = tiles.filter(tile => {
+    if (!paletteSearch) return true;
+    const searchLower = paletteSearch.toLowerCase();
+    const namePinyin = toPinyin(tile.name).toLowerCase();
+    const nameMatch = tile.name.toLowerCase().includes(searchLower) || namePinyin.includes(searchLower);
+    const urlMatch = tile.url.toLowerCase().includes(searchLower);
+    return nameMatch || urlMatch;
+  });
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  // Scroll to selected item when using keyboard navigation
+  useEffect(() => {
+    if (isKeyboardNav && scrollRef.current) {
+      const container = scrollRef.current;
+      const items = container.querySelectorAll('[data-command-item]');
+      const selectedItem = items[selectedIndex];
+      
+      if (selectedItem) {
+        const containerRect = container.getBoundingClientRect();
+        const itemRect = selectedItem.getBoundingClientRect();
+        
+        // Check if item is outside visible area
+        if (itemRect.bottom > containerRect.bottom) {
+          // Scroll down
+          selectedItem.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        } else if (itemRect.top < containerRect.top) {
+          // Scroll up
+          selectedItem.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+      }
+    }
+  }, [selectedIndex, isKeyboardNav]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setIsKeyboardNav(true);
+        setSelectedIndex(prev => 
+          prev < paletteFilteredTiles.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setIsKeyboardNav(true);
+        setSelectedIndex(prev => 
+          prev > 0 ? prev - 1 : paletteFilteredTiles.length - 1
+        );
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (paletteFilteredTiles[selectedIndex]) {
+          window.open(paletteFilteredTiles[selectedIndex].url, '_blank');
+          onClose();
+        }
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, paletteFilteredTiles, selectedIndex, onClose]);
+
+  // Reset selected index when search changes
+  useEffect(() => {
+    setSelectedIndex(0);
+    setIsKeyboardNav(false);
+  }, [paletteSearch]);
+
+  // Handle mouse movement
+  const handleMouseMove = () => {
+    setIsKeyboardNav(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-20"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        onMouseMove={handleMouseMove}
+      >
+        <div className="p-4 border-b border-gray-200">
+          <div className="relative">
+            <Command className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={paletteSearch}
+              onChange={(e) => setPaletteSearch(e.target.value)}
+              placeholder="输入搜索或按 ESC 退出..."
+              className="w-full pl-10 pr-4 py-3 text-lg focus:outline-none"
+            />
+          </div>
+        </div>
+        
+        <div 
+          ref={scrollRef} 
+          className="max-h-96 overflow-y-auto"
+          style={{ scrollBehavior: isKeyboardNav ? 'smooth' : 'auto' }}
+        >
+          {paletteFilteredTiles.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              没有找到匹配的磁贴
+            </div>
+          ) : (
+            <div className="py-2">
+              {paletteFilteredTiles.map((tile, index) => (
+                <div
+                  key={tile.id}
+                  data-command-item
+                  className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${
+                    index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => {
+                    window.open(tile.url, '_blank');
+                    onClose();
+                  }}
+                  onMouseEnter={() => {
+                    if (!isKeyboardNav) {
+                      setSelectedIndex(index);
+                    }
+                  }}
+                >
+                  <div 
+                    className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0"
+                    style={{ backgroundColor: `${tile.color}15` }}
+                  >
+                    <FaviconImage 
+                      url={tile.url} 
+                      name={tile.name} 
+                      color={tile.color}
+                      customIcon={tile.customIcon}
+                      cachedFavicon={tile.cachedFavicon}
+                      size="small"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 truncate">{tile.name}</div>
+                    <div className="text-sm text-gray-500 truncate">{tile.url}</div>
+                  </div>
+                  {index < 9 && (
+                    <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                      {index + 1}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="p-3 border-t border-gray-200 text-xs text-gray-500 flex justify-between">
+          <span>↑↓ 导航 · Enter 打开 · ESC 退出</span>
+          <span>Ctrl+K 打开命令面板</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Sortable Tile Component
+function SortableTile({ tile, index, activeColorFilters }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tile.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const isFilteredOut = activeColorFilters.length > 0 && !activeColorFilters.includes(tile.color.toUpperCase());
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`
+        relative group cursor-move 
+        ${isDragging ? '' : 'transition-all duration-300'}
+        ${isFilteredOut ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}
+      `}
+    >
+      <div
+        className={`block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group ${isDragging ? '' : 'transition-all duration-300'}`}
+        style={(() => {
+          if (!tile.darkness || tile.darkness === 0) {
+            return {
+              borderTop: `4px solid ${tile.color}`,
+            };
+          }
+          
+          const rgb = hexToRgb(tile.color);
+          if (rgb) {
+            const alpha = tile.darkness / 100;
+            return {
+              backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+              borderTop: `4px solid ${tile.color}`,
+            };
+          }
+          
+          return {
+            borderTop: `4px solid ${tile.color}`,
+          };
+        })()}
+        onClick={(e) => {
+          if (!e.target.closest('button') && !e.ctrlKey && !e.metaKey) {
+            window.open(tile.url, '_blank');
+          }
+        }}
+      >
+        {/* Keyboard shortcut indicator */}
+        {index < 9 && (
+          <div className="absolute top-2 left-2 w-6 h-6 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            {index + 1}
+          </div>
+        )}
+
+        {/* External link indicator */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <ExternalLink className="w-4 h-4 text-gray-400" />
+        </div>
+        
+        {/* Large Favicon */}
+        <div className="flex items-center justify-center mb-3">
+          <div 
+            className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+            style={{ backgroundColor: `${tile.color}15` }}
+          >
+            <FaviconImage 
+              url={tile.url} 
+              name={tile.name} 
+              color={tile.color}
+              customIcon={tile.customIcon}
+              cachedFavicon={tile.cachedFavicon}
+            />
+          </div>
+        </div>
+        
+        {/* Title with dynamic color based on background darkness */}
+        <h3 
+          className={`text-sm font-medium text-center truncate px-1 ${
+            tile.darkness > 50 ? 'text-white' : 'text-gray-800'
+          }`}
+        >
+          {tile.name}
+        </h3>
+      </div>
+      
+      {/* Edit/Delete Buttons */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setEditingTile(tile);
+            setIsAddModalOpen(true);
+          }}
+          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+        >
+          <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDeleteTile(tile.id);
+          }}
+          className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Main App Component
 function App() {
   const [tiles, setTiles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,6 +1395,8 @@ function App() {
   const [error, setError] = useState(null);
   const [refreshingFavicons, setRefreshingFavicons] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [activeColorFilters, setActiveColorFilters] = useState([]);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid', 'grouped', 'rainbow'
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
@@ -146,14 +1497,24 @@ function App() {
     setRefreshingFavicons(false);
   };
 
-  // Filter tiles based on search
+  // Filter tiles based on search and color
   const filteredTiles = tiles.filter(tile => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    const namePinyin = toPinyin(tile.name).toLowerCase();
-    const nameMatch = tile.name.toLowerCase().includes(searchLower) || namePinyin.includes(searchLower);
-    const urlMatch = tile.url.toLowerCase().includes(searchLower);
-    return nameMatch || urlMatch;
+    // First apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const namePinyin = toPinyin(tile.name).toLowerCase();
+      const nameMatch = tile.name.toLowerCase().includes(searchLower) || 
+                       namePinyin.includes(searchLower);
+      const urlMatch = tile.url.toLowerCase().includes(searchLower);
+      if (!nameMatch && !urlMatch) return false;
+    }
+    
+    // Then apply color filter for grid view only
+    if (viewMode === 'grid' && activeColorFilters.length > 0) {
+      return activeColorFilters.includes(tile.color.toUpperCase());
+    }
+    
+    return true;
   });
 
   // Keyboard shortcuts for opening tiles 1-9
@@ -169,8 +1530,8 @@ function App() {
         return;
       }
       
-      // Number keys 1-9 to open tiles
-      if (e.key >= '1' && e.key <= '9' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Number keys 1-9 to open tiles (only in grid view)
+      if (viewMode === 'grid' && e.key >= '1' && e.key <= '9' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const index = parseInt(e.key) - 1;
         if (filteredTiles[index]) {
           window.open(filteredTiles[index].url, '_blank');
@@ -180,7 +1541,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [filteredTiles]);
+  }, [filteredTiles, viewMode]);
 
   // Handle drag end for @dnd-kit
   const handleDragEnd = (event) => {
@@ -253,674 +1614,54 @@ function App() {
     reader.readAsText(file);
   };
 
-  // Helper function to convert hex to RGB
-  const hexToRgb = (hex) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
-  };
-
-  // Helper function to determine if a color is dark
-  const isColorDark = (color, darkness = 0) => {
-    // Convert hex to RGB
-    const rgb = hexToRgb(color);
-    if (!rgb) return false;
-    
-    // Adjust for darkness level
-    const adjustedR = rgb.r * (1 - darkness / 100) + 255 * (darkness / 100);
-    const adjustedG = rgb.g * (1 - darkness / 100) + 255 * (darkness / 100);
-    const adjustedB = rgb.b * (1 - darkness / 100) + 255 * (darkness / 100);
-    
-    // Calculate luminance
-    const luminance = (0.299 * adjustedR + 0.587 * adjustedG + 0.114 * adjustedB) / 255;
-    return luminance < 0.5;
-  };
-
-  // Command Palette Component
-  const CommandPalette = () => {
-    const [paletteSearch, setPaletteSearch] = useState('');
-    const [selectedIndex, setSelectedIndex] = useState(0);
-    const [isKeyboardNav, setIsKeyboardNav] = useState(false);
-    const inputRef = useRef(null);
-    const scrollRef = useRef(null);
-
-    const paletteFilteredTiles = tiles.filter(tile => {
-      if (!paletteSearch) return true;
-      const searchLower = paletteSearch.toLowerCase();
-      const namePinyin = toPinyin(tile.name).toLowerCase();
-      const nameMatch = tile.name.toLowerCase().includes(searchLower) || namePinyin.includes(searchLower);
-      const urlMatch = tile.url.toLowerCase().includes(searchLower);
-      return nameMatch || urlMatch;
+  // Color filter handlers
+  const handleColorToggle = (color) => {
+    setActiveColorFilters(prev => {
+      if (prev.includes(color)) {
+        return prev.filter(c => c !== color);
+      }
+      return [...prev, color];
     });
-
-    useEffect(() => {
-      if (isCommandPaletteOpen && inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, []);
-
-    // Scroll to selected item when using keyboard navigation
-    useEffect(() => {
-      if (isKeyboardNav && scrollRef.current) {
-        const container = scrollRef.current;
-        const items = container.querySelectorAll('[data-command-item]');
-        const selectedItem = items[selectedIndex];
-        
-        if (selectedItem) {
-          const containerRect = container.getBoundingClientRect();
-          const itemRect = selectedItem.getBoundingClientRect();
-          
-          // Check if item is outside visible area
-          if (itemRect.bottom > containerRect.bottom) {
-            // Scroll down
-            selectedItem.scrollIntoView({ block: 'end', behavior: 'smooth' });
-          } else if (itemRect.top < containerRect.top) {
-            // Scroll up
-            selectedItem.scrollIntoView({ block: 'start', behavior: 'smooth' });
-          }
-        }
-      }
-    }, [selectedIndex, isKeyboardNav]);
-
-    useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-          setIsCommandPaletteOpen(false);
-        } else if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setIsKeyboardNav(true);
-          setSelectedIndex(prev => 
-            prev < paletteFilteredTiles.length - 1 ? prev + 1 : 0
-          );
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setIsKeyboardNav(true);
-          setSelectedIndex(prev => 
-            prev > 0 ? prev - 1 : paletteFilteredTiles.length - 1
-          );
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          if (paletteFilteredTiles[selectedIndex]) {
-            window.open(paletteFilteredTiles[selectedIndex].url, '_blank');
-            setIsCommandPaletteOpen(false);
-          }
-        }
-      };
-
-      if (isCommandPaletteOpen) {
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-      }
-    }, [isCommandPaletteOpen, paletteFilteredTiles, selectedIndex]);
-
-    // Reset selected index when search changes
-    useEffect(() => {
-      setSelectedIndex(0);
-      setIsKeyboardNav(false);
-    }, [paletteSearch]);
-
-    // Handle mouse movement
-    const handleMouseMove = () => {
-      setIsKeyboardNav(false);
-    };
-
-    if (!isCommandPaletteOpen) return null;
-
-    return (
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-20"
-        onClick={() => setIsCommandPaletteOpen(false)}
-      >
-        <div 
-          className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-          onMouseMove={handleMouseMove}
-        >
-          <div className="p-4 border-b border-gray-200">
-            <div className="relative">
-              <Command className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={paletteSearch}
-                onChange={(e) => setPaletteSearch(e.target.value)}
-                placeholder="输入搜索或按 ESC 退出..."
-                className="w-full pl-10 pr-4 py-3 text-lg focus:outline-none"
-              />
-            </div>
-          </div>
-          
-          <div 
-            ref={scrollRef} 
-            className="max-h-96 overflow-y-auto"
-            style={{ scrollBehavior: isKeyboardNav ? 'smooth' : 'auto' }}
-          >
-            {paletteFilteredTiles.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                没有找到匹配的磁贴
-              </div>
-            ) : (
-              <div className="py-2">
-                {paletteFilteredTiles.map((tile, index) => (
-                  <div
-                    key={tile.id}
-                    data-command-item
-                    className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${
-                      index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => {
-                      window.open(tile.url, '_blank');
-                      setIsCommandPaletteOpen(false);
-                    }}
-                    onMouseEnter={() => {
-                      if (!isKeyboardNav) {
-                        setSelectedIndex(index);
-                      }
-                    }}
-                  >
-                    <div 
-                      className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0"
-                      style={{ backgroundColor: `${tile.color}15` }}
-                    >
-                      <FaviconImage 
-                        url={tile.url} 
-                        name={tile.name} 
-                        color={tile.color}
-                        customIcon={tile.customIcon}
-                        cachedFavicon={tile.cachedFavicon}
-                        size="small"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{tile.name}</div>
-                      <div className="text-sm text-gray-500 truncate">{tile.url}</div>
-                    </div>
-                    {index < 9 && (
-                      <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                        {index + 1}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="p-3 border-t border-gray-200 text-xs text-gray-500 flex justify-between">
-            <span>↑↓ 导航 · Enter 打开 · ESC 退出</span>
-            <span>Ctrl+K 打开命令面板</span>
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  // Sortable Tile Component
-  function SortableTile({ tile, index }) {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: tile.id });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-    };
-
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        className={`relative group cursor-move ${isDragging ? '' : 'transition-all duration-200'}`}
-      >
-        <div
-          className={`block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group ${isDragging ? '' : 'transition-all duration-300'}`}
-          style={(() => {
-            if (!tile.darkness || tile.darkness === 0) {
-              return {
-                borderTop: `4px solid ${tile.color}`,
-              };
-            }
-            
-            const rgb = hexToRgb(tile.color);
-            if (rgb) {
-              const alpha = tile.darkness / 100;
-              return {
-                backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
-                borderTop: `4px solid ${tile.color}`,
-              };
-            }
-            
-            return {
-              borderTop: `4px solid ${tile.color}`,
-            };
-          })()}
-          onClick={(e) => {
-            if (!e.target.closest('button') && !e.ctrlKey && !e.metaKey) {
-              window.open(tile.url, '_blank');
-            }
-          }}
-        >
-          {/* Keyboard shortcut indicator */}
-          {index < 9 && (
-            <div className="absolute top-2 left-2 w-6 h-6 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-              {index + 1}
-            </div>
-          )}
-
-          {/* External link indicator */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <ExternalLink className="w-4 h-4 text-gray-400" />
-          </div>
-          
-          {/* Large Favicon */}
-          <div className="flex items-center justify-center mb-3">
-            <div 
-              className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
-              style={{ backgroundColor: `${tile.color}15` }}
-            >
-              <FaviconImage 
-                url={tile.url} 
-                name={tile.name} 
-                color={tile.color}
-                customIcon={tile.customIcon}
-                cachedFavicon={tile.cachedFavicon}
-              />
-            </div>
-          </div>
-          
-          {/* Title with dynamic color based on background darkness */}
-          <h3 
-            className={`text-sm font-medium text-center truncate px-1 ${
-              tile.darkness > 50 ? 'text-white' : 'text-gray-800'
-            }`}
-          >
-            {tile.name}
-          </h3>
-        </div>
-        
-        {/* Edit/Delete Buttons */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setEditingTile(tile);
-              setIsAddModalOpen(true);
-            }}
-            className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
-          >
-            <Edit2 className="w-3.5 h-3.5 text-gray-600" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleDeleteTile(tile.id);
-            }}
-            className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-red-600" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Enhanced favicon component with custom icon support
-  const FaviconImage = ({ url, name, color, customIcon, cachedFavicon, size = 'normal' }) => {
-    const [currentSrc, setCurrentSrc] = useState(0);
-    const [hasError, setHasError] = useState(false);
-    
-    const domain = (() => {
-      try {
-        return new URL(url).hostname;
-      } catch {
-        return '';
-      }
-    })();
-
-    const sizeClass = size === 'small' ? 'w-6 h-6' : 'w-12 h-12';
-    const iconSizeClass = size === 'small' ? 'w-5 h-5' : 'w-10 h-10';
-
-    // If custom icon is provided, use it directly
-    if (customIcon) {
-      return (
-        <img 
-          src={customIcon}
-          alt={name}
-          className={`${sizeClass} object-contain`}
-          onError={() => setHasError(true)}
-          loading="lazy"
-          style={{
-            WebkitImageRendering: '-webkit-optimize-contrast',
-            imageRendering: 'crisp-edges',
-          }}
-        />
-      );
-    }
-
-    // If cached favicon exists, try it first
-    const baseFaviconSources = [
-      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-      `https://${domain}/favicon.ico`,
-    ];
-
-    // Put cached favicon at the beginning if it exists
-    const faviconSources = cachedFavicon 
-      ? [cachedFavicon, ...baseFaviconSources.filter(src => src !== cachedFavicon)]
-      : baseFaviconSources;
-
-    const handleError = () => {
-      if (currentSrc < faviconSources.length - 1) {
-        setCurrentSrc(currentSrc + 1);
-      } else {
-        setHasError(true);
-      }
-    };
-
-    if (hasError || !domain) {
-      return (
-        <Globe 
-          className={iconSizeClass}
-          style={{ color: color }}
-        />
-      );
-    }
-
-    return (
-      <img 
-        src={faviconSources[currentSrc]}
-        alt={name}
-        className={`${sizeClass} object-contain`}
-        onError={handleError}
-        loading="lazy"
-        style={{
-          WebkitImageRendering: '-webkit-optimize-contrast',
-          imageRendering: 'crisp-edges',
-        }}
-      />
-    );
-  };
-
-  // Tile Modal Component
-  const TileModal = () => {
-    const [formData, setFormData] = useState(
-      editingTile || { name: '', url: '', color: '#BE002F', darkness: 0, customIcon: '' }
-    );
-    const [showCustomIcon, setShowCustomIcon] = useState(!!formData.customIcon);
-    const [customColor, setCustomColor] = useState('');
-    const [colorError, setColorError] = useState('');
-
-    // Default colors
-    const defaultColors = [
-      '#BE002F', // Red
-      '#FF0097', // Pink
-      '#FA8C35', // Orange
-      '#D9B611', // Yellow
-      '#2ADD9C', // Green
-    ];
-
-    // Validate hex color
-    const isValidHexColor = (color) => {
-      return /^#[0-9A-F]{6}$/i.test(color);
-    };
-
-    // Handle custom color input
-    const handleCustomColorSubmit = () => {
-      const cleanedColor = customColor.startsWith('#') ? customColor : `#${customColor}`;
-      
-      if (isValidHexColor(cleanedColor)) {
-        setFormData({ ...formData, color: cleanedColor.toUpperCase() });
-        setCustomColor('');
-        setColorError('');
-      } else {
-        setColorError('请输入有效的颜色代码，如 #9B4400');
-      }
-    };
-
-    // Generate background style based on darkness
-    const getPreviewStyle = () => {
-      if (!formData.darkness || formData.darkness === 0) {
-        return {
-          backgroundColor: 'white',
-          borderTop: `4px solid ${formData.color}`,
-        };
-      }
-      
-      const alpha = formData.darkness / 100;
-      const rgb = hexToRgb(formData.color);
-      if (rgb) {
-        return {
-          backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
-          borderTop: `4px solid ${formData.color}`,
-        };
-      }
-      
-      return {
-        backgroundColor: 'white',
-        borderTop: `4px solid ${formData.color}`,
-      };
-    };
-
-    // Helper to convert hex to RGB
-    const hexToRgb = (hex) => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-      } : null;
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            {editingTile ? '编辑磁贴' : '添加新磁贴'}
-          </h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">名称</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="例如：Google"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">网址</label>
-              <input
-                type="url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://example.com"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">颜色</label>
-              <div className="space-y-3">
-                {/* Default colors */}
-                <div className="flex gap-2 mb-3">
-                  {defaultColors.map(color => (
-                    <button
-                      key={color}
-                      onClick={() => setFormData({ ...formData, color })}
-                      className={`w-10 h-10 rounded-lg transition-all border-2 ${
-                        formData.color === color 
-                          ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
-                          : 'hover:scale-105 border-transparent'
-                      }`}
-                      style={{ 
-                        backgroundColor: color,
-                      }}
-                      title={color}
-                    />
-                  ))}
-                </div>
-
-                {/* Custom color input */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={customColor}
-                      onChange={(e) => {
-                        setCustomColor(e.target.value);
-                        setColorError('');
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          handleCustomColorSubmit();
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="输入颜色代码，如 #9B4400"
-                    />
-                    <button
-                      onClick={handleCustomColorSubmit}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      应用
-                    </button>
-                  </div>
-                  {colorError && (
-                    <p className="text-sm text-red-500">{colorError}</p>
-                  )}
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>当前颜色：</span>
-                    <div 
-                      className="w-6 h-6 rounded border border-gray-300" 
-                      style={{ backgroundColor: formData.color }}
-                    />
-                    <span className="font-mono">{formData.color}</span>
-                  </div>
-                </div>
-                
-                {/* Darkness slider */}
-                <div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
-                    <span>背景深度</span>
-                    <span>{formData.darkness || 0}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="5"
-                    value={formData.darkness || 0}
-                    onChange={(e) => setFormData({ ...formData, darkness: parseInt(e.target.value) })}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, #e5e7eb 0%, ${formData.color} ${formData.darkness || 0}%, #e5e7eb ${formData.darkness || 0}%)`
-                    }}
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>0% (仅顶部)</span>
-                    <span>100% (全彩)</span>
-                  </div>
-                </div>
-                
-                {/* Preview */}
-                <div className="mt-3">
-                  <p className="text-sm text-gray-600 mb-2">预览效果：</p>
-                  <div 
-                    className="w-24 h-24 rounded-xl shadow-sm mx-auto transition-all duration-300"
-                    style={getPreviewStyle()}
-                  >
-                    <div className="h-full flex items-center justify-center">
-                      <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">自定义图标</label>
-                <button
-                  type="button"
-                  onClick={() => setShowCustomIcon(!showCustomIcon)}
-                  className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1"
-                >
-                  <Image className="w-4 h-4" />
-                  {showCustomIcon ? '隐藏' : '设置'}
-                </button>
-              </div>
-              
-              {showCustomIcon && (
-                <div className="space-y-2">
-                  <input
-                    type="url"
-                    value={formData.customIcon || ''}
-                    onChange={(e) => setFormData({ ...formData, customIcon: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://example.com/icon.png"
-                  />
-                  <p className="text-xs text-gray-500">
-                    输入图标的完整URL地址，支持 PNG、JPG、SVG 等格式
-                  </p>
-                  {formData.customIcon && (
-                    <div className="mt-2 p-3 bg-gray-50 rounded-lg flex items-center gap-3">
-                      <span className="text-sm text-gray-600">预览：</span>
-                      <img 
-                        src={formData.customIcon} 
-                        alt="Icon preview" 
-                        className="w-10 h-10 object-contain"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'block';
-                        }}
-                      />
-                      <span className="hidden text-sm text-red-500">图标加载失败</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={() => handleSaveTile(formData)}
-              disabled={!formData.name || !formData.url}
-              className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              保存
-            </button>
-            <button
-              onClick={() => {
-                setIsAddModalOpen(false);
-                setEditingTile(null);
-              }}
-              className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  const handleColorReset = () => {
+    setActiveColorFilters([]);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50" style={{ backgroundColor: '#F8FAFB' }}>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-out;
+        }
+        
+        .animate-slideIn {
+          animation: slideIn 0.5s ease-out;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-md shadow-sm z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -939,6 +1680,11 @@ function App() {
             
             {/* Action Buttons */}
             <div className="flex gap-2 items-center">
+              {/* View Mode Toggle */}
+              <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+              
+              <div className="w-px h-8 bg-gray-300" />
+              
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
@@ -976,13 +1722,25 @@ function App() {
               </label>
 
               {saving && (
-                <div className="flex items-center gap-2 text-sm text-blue-600 opacity-60">
-                  <Save className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <Save className="w-4 h-4 animate-pulse" />
                   <span className="text-xs">已保存</span>
                 </div>
               )}
             </div>
           </div>
+          
+          {/* Color Filter (only show in grid view) */}
+          {tiles.length > 0 && viewMode === 'grid' && (
+            <div className="mt-4">
+              <ColorFilter
+                tiles={tiles}
+                activeColors={activeColorFilters}
+                onColorToggle={handleColorToggle}
+                onReset={handleColorReset}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1002,7 +1760,7 @@ function App() {
         </div>
       )}
 
-      {/* Tiles Grid */}
+      {/* Tiles Grid/Views */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
           <div className="flex items-center justify-center h-64">
@@ -1024,38 +1782,81 @@ function App() {
             )}
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={filteredTiles.map(tile => tile.id)}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {filteredTiles.map((tile, index) => (
-                  <SortableTile
-                    key={tile.id}
-                    tile={tile}
-                    index={index}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <>
+            {/* Grid View */}
+            {viewMode === 'grid' && (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={filteredTiles.map(tile => tile.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {filteredTiles.map((tile, index) => (
+                      <SortableTile
+                        key={tile.id}
+                        tile={tile}
+                        index={index}
+                        activeColorFilters={activeColorFilters}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+            
+            {/* Grouped View */}
+            {viewMode === 'grouped' && (
+              <GroupedTileView
+                tiles={filteredTiles}
+                onEditTile={(tile) => {
+                  setEditingTile(tile);
+                  setIsAddModalOpen(true);
+                }}
+                onDeleteTile={handleDeleteTile}
+              />
+            )}
+            
+            {/* Rainbow View */}
+            {viewMode === 'rainbow' && (
+              <RainbowTileView
+                tiles={filteredTiles}
+                onEditTile={(tile) => {
+                  setEditingTile(tile);
+                  setIsAddModalOpen(true);
+                }}
+                onDeleteTile={handleDeleteTile}
+              />
+            )}
+          </>
         )}
       </div>
 
       {/* Add/Edit Modal */}
-      {isAddModalOpen && <TileModal />}
+      <TileModal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingTile(null);
+        }}
+        editingTile={editingTile}
+        onSave={handleSaveTile}
+        existingTiles={tiles}
+      />
       
       {/* Command Palette */}
-      <CommandPalette />
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        tiles={tiles}
+      />
       
       {/* Footer */}
       <div className="text-center py-4 text-sm text-gray-500">
-        
+        <span className="text-xs">Press Ctrl+K to open command palette · 1-9 to quick open</span>
       </div>
     </div>
   );
