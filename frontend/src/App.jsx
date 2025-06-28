@@ -1176,7 +1176,7 @@ function SortableTile({ tile, index, activeColorFilters, onEdit, onDelete }) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition,
   };
 
   const isFilteredOut = activeColorFilters.length > 0 && !activeColorFilters.includes(tile.color.toUpperCase());
@@ -1188,13 +1188,15 @@ function SortableTile({ tile, index, activeColorFilters, onEdit, onDelete }) {
       {...attributes}
       {...listeners}
       className={`
-        relative group cursor-move 
-        ${isDragging ? '' : 'transition-all duration-300'}
+        relative group cursor-move
         ${isFilteredOut ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}
+        ${isDragging ? 'z-50' : 'z-auto'}
       `}
     >
       <div
-        className={`block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group ${isDragging ? '' : 'transition-all duration-300'}`}
+        className={`block bg-white rounded-xl shadow-sm hover:shadow-lg p-4 h-32 relative overflow-hidden group ${
+          isDragging ? 'opacity-50' : ''
+        }`}
         style={(() => {
           if (!tile.darkness || tile.darkness === 0) {
             return {
