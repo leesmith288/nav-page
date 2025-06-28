@@ -845,13 +845,18 @@ const ColorMeaningsModal = ({ isOpen, onClose, colorMeanings, onSave, tiles }) =
   const [editingColor, setEditingColor] = useState(null);
   const [newMeaning, setNewMeaning] = useState({ name: '', emoji: '', description: '' });
   
+  // Sync local state with props when modal opens or colorMeanings change
+  useEffect(() => {
+    setMeanings(colorMeanings);
+  }, [colorMeanings, isOpen]);
+  
   // Get all unique colors from tiles
   const usedColors = [...new Set(tiles.map(tile => tile.color.toUpperCase()))];
   
   const handleSave = (color) => {
     const updatedMeanings = {
-      ...meanings,
-      [color]: { ...newMeaning }
+      ...colorMeanings,  // Start with all existing meanings from props
+      [color]: { ...newMeaning }  // Add/update only the specific color
     };
     setMeanings(updatedMeanings);
     onSave(updatedMeanings);
@@ -860,7 +865,7 @@ const ColorMeaningsModal = ({ isOpen, onClose, colorMeanings, onSave, tiles }) =
   };
   
   const handleDelete = (color) => {
-    const updatedMeanings = { ...meanings };
+    const updatedMeanings = { ...colorMeanings };  // Start with existing meanings
     delete updatedMeanings[color];
     setMeanings(updatedMeanings);
     onSave(updatedMeanings);
