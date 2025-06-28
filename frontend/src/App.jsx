@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command, Layers, Palette, X, Check, Sparkles } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command, Layers, Palette, X, Check, Sparkles, Settings } from 'lucide-react';
 import pinyin from 'pinyin';
 import {
   DndContext,
@@ -127,8 +127,8 @@ const keywordColorMap = {
   important: '#BE002F',
 };
 
-// Color information
-const colorInfo = {
+// Default color information
+const defaultColorInfo = {
   '#BE002F': { name: '重要事项', emoji: '🔴', description: '工作、银行、紧急' },
   '#FF0097': { name: '社交通讯', emoji: '💬', description: '社交媒体、聊天、邮件' },
   '#FA8C35': { name: '生产力工具', emoji: '🛠️', description: '笔记、任务、开发工具' },
@@ -275,13 +275,16 @@ const suggestColor = (url, name, existingTiles) => {
 };
 
 // Color Filter Component
-const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset }) => {
+const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeanings }) => {
   // Group tiles by color and count
   const colorGroups = tiles.reduce((acc, tile) => {
     const color = tile.color.toUpperCase();
     acc[color] = (acc[color] || 0) + 1;
     return acc;
   }, {});
+
+  // Combine default and custom color meanings
+  const allColorInfo = { ...defaultColorInfo, ...colorMeanings };
 
   const isAllSelected = activeColors.length === 0;
 
@@ -307,7 +310,7 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset }) => {
       <div className="flex items-center gap-2 flex-wrap">
         {Object.entries(colorGroups).map(([color, count]) => {
           const isActive = activeColors.includes(color);
-          const meaning = colorInfo[color];
+          const meaning = allColorInfo[color];
           
           return (
             <button
@@ -485,7 +488,7 @@ const FaviconImage = ({ url, name, color, customIcon, cachedFavicon, size = 'nor
 };
 
 // Grouped View Component
-const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
+const GroupedTileView = ({ tiles, onEditTile, onDeleteTile, colorMeanings }) => {
   // Group tiles by color
   const colorGroups = tiles.reduce((acc, tile) => {
     const color = tile.color.toUpperCase();
@@ -494,6 +497,9 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
     return acc;
   }, {});
 
+  // Combine default and custom color meanings
+  const allColorInfo = { ...defaultColorInfo, ...colorMeanings };
+
   // Sort groups by number of tiles (popular colors first)
   const sortedGroups = Object.entries(colorGroups)
     .sort(([, a], [, b]) => b.length - a.length);
@@ -501,11 +507,7 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
   return (
     <div className="space-y-8">
       {sortedGroups.map(([color, groupTiles]) => {
-        const info = colorInfo[color] || { 
-          name: '其他', 
-          emoji: '🔷', 
-          description: `${color}` 
-        };
+        const info = allColorInfo[color];
 
         return (
           <div key={color} className="relative animate-fadeIn">
@@ -519,19 +521,25 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
               
               {/* Section title */}
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{info.emoji}</span>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {info.name}
-                </h3>
-                <span className="text-sm text-gray-500">
-                  ({groupTiles.length})
+                {info && (
+                  <>
+                    <span className="text-2xl">{info.emoji}</span>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {info.name}
+                    </h3>
+                  </>
+                )}
+                <span className="text-sm text-gray-500 font-mono">
+                  {color} ({groupTiles.length})
                 </span>
               </div>
               
               {/* Description */}
-              <span className="text-sm text-gray-500 hidden md:inline">
-                {info.description}
-              </span>
+              {info && info.description && (
+                <span className="text-sm text-gray-500 hidden md:inline">
+                  {info.description}
+                </span>
+              )}
             </div>
 
             {/* Tiles Grid for this color */}
@@ -744,7 +752,7 @@ const RainbowTileView = ({ tiles, onEditTile, onDeleteTile }) => {
 };
 
 // Enhanced Color Picker with Smart Suggestions
-const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles }) => {
+const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles, colorMeanings }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [customColor, setCustomColor] = useState('');
@@ -759,9 +767,16 @@ const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles }
     }
   }, [url, name, existingTiles]);
   
+  // Get all unique colors from existing tiles
+  const usedColors = [...new Set(existingTiles.map(tile => tile.color.toUpperCase()))];
+  
+  // Default colors
   const defaultColors = [
     '#BE002F', '#FF0097', '#FA8C35', '#D9B611', '#2ADD9C', '#0066CC'
   ];
+  
+  // Combine default and used colors, removing duplicates
+  const allAvailableColors = [...new Set([...defaultColors, ...usedColors])];
   
   // Validate hex color
   const isValidHexColor = (color) => {
@@ -846,28 +861,36 @@ const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles }
         </div>
       )}
       
-      {/* Default colors */}
+      {/* All available colors */}
       <div className="space-y-3">
-        <div className="flex gap-2 mb-3">
-          {defaultColors.map(color => (
-            <button
-              key={color}
-              onClick={() => setFormData({ ...formData, color })}
-              className={`w-10 h-10 rounded-lg transition-all border-2 ${
-                formData.color === color 
-                  ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
-                  : 'hover:scale-105 border-transparent'
-              }`}
-              style={{ 
-                backgroundColor: color,
-              }}
-              title={colorInfo[color]?.name || color}
-            />
-          ))}
+        <div className="flex gap-2 mb-3 flex-wrap">
+          {allAvailableColors.map(color => {
+            const colorInfo = { ...defaultColorInfo, ...colorMeanings }[color];
+            return (
+              <button
+                key={color}
+                onClick={() => setFormData({ ...formData, color })}
+                className={`relative group w-10 h-10 rounded-lg transition-all border-2 ${
+                  formData.color === color 
+                    ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
+                    : 'hover:scale-105 border-transparent'
+                }`}
+                style={{ 
+                  backgroundColor: color,
+                }}
+                title={colorInfo?.name || color}
+              >
+                {/* Show color code on hover */}
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-mono text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  {color}
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Custom color input */}
-        <div className="space-y-2">
+        <div className="space-y-2 mt-8">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -967,11 +990,21 @@ const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles }
 };
 
 // Tile Modal Component
-const TileModal = ({ isOpen, onClose, editingTile, onSave, existingTiles }) => {
+const TileModal = ({ isOpen, onClose, editingTile, onSave, existingTiles, colorMeanings }) => {
   const [formData, setFormData] = useState(
     editingTile || { name: '', url: '', color: '#BE002F', darkness: 0, customIcon: '' }
   );
   const [showCustomIcon, setShowCustomIcon] = useState(!!formData.customIcon);
+
+  useEffect(() => {
+    if (editingTile) {
+      setFormData(editingTile);
+      setShowCustomIcon(!!editingTile.customIcon);
+    } else {
+      setFormData({ name: '', url: '', color: '#BE002F', darkness: 0, customIcon: '' });
+      setShowCustomIcon(false);
+    }
+  }, [editingTile]);
 
   if (!isOpen) return null;
 
@@ -1013,6 +1046,7 @@ const TileModal = ({ isOpen, onClose, editingTile, onSave, existingTiles }) => {
               url={formData.url}
               name={formData.name}
               existingTiles={existingTiles}
+              colorMeanings={colorMeanings}
             />
           </div>
 
@@ -1075,6 +1109,152 @@ const TileModal = ({ isOpen, onClose, editingTile, onSave, existingTiles }) => {
           >
             取消
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Color Meanings Modal
+const ColorMeaningsModal = ({ isOpen, onClose, colorMeanings, onSave, tiles }) => {
+  const [meanings, setMeanings] = useState(colorMeanings);
+  const [editingColor, setEditingColor] = useState(null);
+  const [newMeaning, setNewMeaning] = useState({ name: '', emoji: '', description: '' });
+  
+  // Get all unique colors from tiles
+  const usedColors = [...new Set(tiles.map(tile => tile.color.toUpperCase()))];
+  
+  const handleSave = (color) => {
+    const updatedMeanings = {
+      ...meanings,
+      [color]: { ...newMeaning }
+    };
+    setMeanings(updatedMeanings);
+    onSave(updatedMeanings);
+    setEditingColor(null);
+    setNewMeaning({ name: '', emoji: '', description: '' });
+  };
+  
+  const handleDelete = (color) => {
+    const updatedMeanings = { ...meanings };
+    delete updatedMeanings[color];
+    setMeanings(updatedMeanings);
+    onSave(updatedMeanings);
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold text-gray-800">颜色含义管理</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {usedColors.map(color => {
+            const meaning = meanings[color] || defaultColorInfo[color];
+            const isCustom = !defaultColorInfo[color] || meanings[color];
+            const isEditing = editingColor === color;
+            
+            return (
+              <div key={color} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div 
+                  className="w-10 h-10 rounded-lg shadow-sm flex-shrink-0"
+                  style={{ backgroundColor: color }}
+                />
+                
+                {isEditing ? (
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newMeaning.emoji}
+                        onChange={(e) => setNewMeaning({ ...newMeaning, emoji: e.target.value })}
+                        placeholder="🏷️"
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                      />
+                      <input
+                        type="text"
+                        value={newMeaning.name}
+                        onChange={(e) => setNewMeaning({ ...newMeaning, name: e.target.value })}
+                        placeholder="名称"
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={newMeaning.description}
+                      onChange={(e) => setNewMeaning({ ...newMeaning, description: e.target.value })}
+                      placeholder="描述（可选）"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSave(color)}
+                        disabled={!newMeaning.name}
+                        className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:bg-gray-300"
+                      >
+                        保存
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingColor(null);
+                          setNewMeaning({ name: '', emoji: '', description: '' });
+                        }}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        {meaning && (
+                          <>
+                            <span className="text-lg">{meaning.emoji}</span>
+                            <span className="font-medium text-gray-800">{meaning.name}</span>
+                          </>
+                        )}
+                        <span className="text-sm text-gray-500 font-mono">{color}</span>
+                      </div>
+                      {meaning?.description && (
+                        <p className="text-sm text-gray-600 mt-1">{meaning.description}</p>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingColor(color);
+                          setNewMeaning(meaning || { name: '', emoji: '', description: '' });
+                        }}
+                        className="p-1.5 text-gray-600 hover:bg-gray-200 rounded"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      {isCustom && (
+                        <button
+                          onClick={() => handleDelete(color)}
+                          className="p-1.5 text-red-600 hover:bg-gray-200 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1261,7 +1441,7 @@ const CommandPalette = ({ isOpen, onClose, tiles }) => {
 };
 
 // Sortable Tile Component
-function SortableTile({ tile, index, activeColorFilters }) {
+function SortableTile({ tile, index, activeColorFilters, onEdit, onDelete }) {
   const {
     attributes,
     listeners,
@@ -1362,8 +1542,7 @@ function SortableTile({ tile, index, activeColorFilters }) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setEditingTile(tile);
-            setIsAddModalOpen(true);
+            onEdit(tile);
           }}
           className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
         >
@@ -1373,7 +1552,7 @@ function SortableTile({ tile, index, activeColorFilters }) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            handleDeleteTile(tile.id);
+            onDelete(tile.id);
           }}
           className="p-1.5 bg-white rounded-lg hover:bg-gray-100 shadow-sm transition-colors"
         >
@@ -1397,6 +1576,8 @@ function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [activeColorFilters, setActiveColorFilters] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid', 'grouped', 'rainbow'
+  const [colorMeanings, setColorMeanings] = useState({});
+  const [isColorMeaningsModalOpen, setIsColorMeaningsModalOpen] = useState(false);
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
@@ -1410,9 +1591,10 @@ function App() {
     })
   );
 
-  // Load tiles from API
+  // Load tiles and color meanings from API
   useEffect(() => {
     loadTiles();
+    loadColorMeanings();
   }, []);
 
   const loadTiles = async () => {
@@ -1428,6 +1610,18 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadColorMeanings = () => {
+    const savedMeanings = localStorage.getItem('colorMeanings');
+    if (savedMeanings) {
+      setColorMeanings(JSON.parse(savedMeanings));
+    }
+  };
+
+  const saveColorMeanings = (meanings) => {
+    localStorage.setItem('colorMeanings', JSON.stringify(meanings));
+    setColorMeanings(meanings);
   };
 
   // Save tiles to API
@@ -1583,7 +1777,7 @@ function App() {
 
   // Export configuration
   const handleExport = () => {
-    const dataStr = JSON.stringify({ tiles }, null, 2);
+    const dataStr = JSON.stringify({ tiles, colorMeanings }, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `navigation-backup-${new Date().toISOString().split('T')[0]}.json`;
     
@@ -1604,7 +1798,11 @@ function App() {
         const data = JSON.parse(e.target.result);
         if (data.tiles && Array.isArray(data.tiles)) {
           saveTiles(data.tiles);
-        } else {
+        }
+        if (data.colorMeanings) {
+          saveColorMeanings(data.colorMeanings);
+        }
+        if (!data.tiles && !data.colorMeanings) {
           alert('无效的配置文件格式');
         }
       } catch (error) {
@@ -1694,6 +1892,14 @@ function App() {
               </button>
               
               <button
+                onClick={() => setIsColorMeaningsModalOpen(true)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="颜色含义设置"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              
+              <button
                 onClick={refreshFavicons}
                 disabled={refreshingFavicons}
                 className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1738,6 +1944,7 @@ function App() {
                 activeColors={activeColorFilters}
                 onColorToggle={handleColorToggle}
                 onReset={handleColorReset}
+                colorMeanings={colorMeanings}
               />
             </div>
           )}
@@ -1801,6 +2008,11 @@ function App() {
                         tile={tile}
                         index={index}
                         activeColorFilters={activeColorFilters}
+                        onEdit={(tile) => {
+                          setEditingTile(tile);
+                          setIsAddModalOpen(true);
+                        }}
+                        onDelete={handleDeleteTile}
                       />
                     ))}
                   </div>
@@ -1817,6 +2029,7 @@ function App() {
                   setIsAddModalOpen(true);
                 }}
                 onDeleteTile={handleDeleteTile}
+                colorMeanings={colorMeanings}
               />
             )}
             
@@ -1845,6 +2058,16 @@ function App() {
         editingTile={editingTile}
         onSave={handleSaveTile}
         existingTiles={tiles}
+        colorMeanings={colorMeanings}
+      />
+      
+      {/* Color Meanings Modal */}
+      <ColorMeaningsModal
+        isOpen={isColorMeaningsModalOpen}
+        onClose={() => setIsColorMeaningsModalOpen(false)}
+        colorMeanings={colorMeanings}
+        onSave={saveColorMeanings}
+        tiles={tiles}
       />
       
       {/* Command Palette */}
@@ -1856,7 +2079,7 @@ function App() {
       
       {/* Footer */}
       <div className="text-center py-4 text-sm text-gray-500">
-        <span className="text-xs">Press Ctrl+K to open command palette · 1-9 to quick open</span>
+        
       </div>
     </div>
   );
