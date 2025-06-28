@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command, Layers, Palette, X, Check, Sparkles, Settings } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Download, Upload, Globe, Loader2, ExternalLink, Grid, Save, AlertCircle, Image, RefreshCw, Command, Layers, Palette, X, Check, Settings } from 'lucide-react';
 import pinyin from 'pinyin';
 import {
   DndContext,
@@ -34,107 +34,6 @@ const toPinyin = (text) => {
   } catch {
     return text;
   }
-};
-
-// Domain to color mapping database
-const domainColorMap = {
-  // Social & Communication
-  'facebook.com': '#FF0097',
-  'twitter.com': '#FF0097',
-  'instagram.com': '#FF0097',
-  'linkedin.com': '#FF0097',
-  'whatsapp.com': '#FF0097',
-  'telegram.org': '#FF0097',
-  'discord.com': '#FF0097',
-  'slack.com': '#FF0097',
-  
-  // Development & Code
-  'github.com': '#0066CC',
-  'gitlab.com': '#0066CC',
-  'stackoverflow.com': '#0066CC',
-  'npmjs.com': '#0066CC',
-  'vercel.com': '#0066CC',
-  'netlify.com': '#0066CC',
-  'codepen.io': '#0066CC',
-  'codesandbox.io': '#0066CC',
-  
-  // Productivity & Work
-  'notion.so': '#FA8C35',
-  'trello.com': '#FA8C35',
-  'asana.com': '#FA8C35',
-  'monday.com': '#FA8C35',
-  'figma.com': '#FA8C35',
-  'miro.com': '#FA8C35',
-  'airtable.com': '#FA8C35',
-  'clickup.com': '#FA8C35',
-  
-  // Learning & Documentation
-  'wikipedia.org': '#D9B611',
-  'coursera.org': '#D9B611',
-  'udemy.com': '#D9B611',
-  'medium.com': '#D9B611',
-  'developer.mozilla.org': '#D9B611',
-  'w3schools.com': '#D9B611',
-  'stackoverflow.com': '#D9B611',
-  
-  // Entertainment
-  'youtube.com': '#2ADD9C',
-  'netflix.com': '#2ADD9C',
-  'spotify.com': '#2ADD9C',
-  'twitch.tv': '#2ADD9C',
-  'reddit.com': '#2ADD9C',
-  'pinterest.com': '#2ADD9C',
-  
-  // Important & Finance
-  'gmail.com': '#BE002F',
-  'outlook.com': '#BE002F',
-  'paypal.com': '#BE002F',
-  'stripe.com': '#BE002F',
-  'chase.com': '#BE002F',
-  'bankofamerica.com': '#BE002F',
-};
-
-// Keyword to color mapping
-const keywordColorMap = {
-  // Keywords for different categories
-  social: '#FF0097',
-  chat: '#FF0097',
-  message: '#FF0097',
-  
-  code: '#0066CC',
-  dev: '#0066CC',
-  api: '#0066CC',
-  git: '#0066CC',
-  
-  work: '#FA8C35',
-  task: '#FA8C35',
-  project: '#FA8C35',
-  design: '#FA8C35',
-  
-  learn: '#D9B611',
-  doc: '#D9B611',
-  guide: '#D9B611',
-  tutorial: '#D9B611',
-  
-  video: '#2ADD9C',
-  music: '#2ADD9C',
-  game: '#2ADD9C',
-  play: '#2ADD9C',
-  
-  bank: '#BE002F',
-  pay: '#BE002F',
-  mail: '#BE002F',
-  important: '#BE002F',
-};
-
-// Default color information
-const defaultColorInfo = {
-  '#BE002F': { name: '重要事项', emoji: '🔴', description: '工作、银行、紧急' },
-  '#FF0097': { name: '社交通讯', emoji: '💬', description: '社交媒体、聊天、邮件' },
-  '#FA8C35': { name: '生产力工具', emoji: '🛠️', description: '笔记、任务、开发工具' },
-  '#D9B611': { name: '学习资源', emoji: '📚', description: '文档、教程、参考' },
-  '#2ADD9C': { name: '娱乐休闲', emoji: '🎮', description: '视频、音乐、游戏' },
-  '#0066CC': { name: '开发编程', emoji: '💻', description: '代码、开发、技术' },
 };
 
 // Helper function to convert hex to RGB
@@ -187,93 +86,6 @@ const hexToHue = (hex) => {
   return hue * 360;
 };
 
-// Smart color suggestion function
-const suggestColor = (url, name, existingTiles) => {
-  const suggestions = [];
-  
-  try {
-    const domain = new URL(url).hostname.replace('www.', '');
-    
-    // 1. Check direct domain match
-    if (domainColorMap[domain]) {
-      suggestions.push({
-        color: domainColorMap[domain],
-        reason: '基于网站类型',
-        confidence: 0.9
-      });
-    }
-    
-    // 2. Check domain keywords
-    const domainParts = domain.split('.');
-    for (const part of domainParts) {
-      for (const [keyword, color] of Object.entries(keywordColorMap)) {
-        if (part.includes(keyword)) {
-          suggestions.push({
-            color,
-            reason: `包含关键词 "${keyword}"`,
-            confidence: 0.7
-          });
-          break;
-        }
-      }
-    }
-    
-    // 3. Check name keywords
-    const nameLower = name.toLowerCase();
-    for (const [keyword, color] of Object.entries(keywordColorMap)) {
-      if (nameLower.includes(keyword)) {
-        suggestions.push({
-          color,
-          reason: `名称包含 "${keyword}"`,
-          confidence: 0.6
-        });
-      }
-    }
-    
-    // 4. Similar sites analysis
-    const similarSites = existingTiles.filter(tile => {
-      try {
-        const tileDomain = new URL(tile.url).hostname.replace('www.', '');
-        return tileDomain.includes(domainParts[0]) || 
-               domainParts[0].includes(tileDomain.split('.')[0]);
-      } catch {
-        return false;
-      }
-    });
-    
-    if (similarSites.length > 0) {
-      const colorCounts = similarSites.reduce((acc, tile) => {
-        acc[tile.color] = (acc[tile.color] || 0) + 1;
-        return acc;
-      }, {});
-      
-      const mostUsedColor = Object.entries(colorCounts)
-        .sort(([, a], [, b]) => b - a)[0];
-      
-      if (mostUsedColor) {
-        suggestions.push({
-          color: mostUsedColor[0],
-          reason: '类似网站使用此颜色',
-          confidence: 0.5
-        });
-      }
-    }
-    
-  } catch (error) {
-    // Invalid URL, no suggestions
-  }
-  
-  // Remove duplicates and sort by confidence
-  const uniqueSuggestions = suggestions
-    .filter((s, i, arr) => 
-      arr.findIndex(x => x.color === s.color) === i
-    )
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 3); // Top 3 suggestions
-  
-  return uniqueSuggestions;
-};
-
 // Color Filter Component
 const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeanings }) => {
   // Group tiles by color and count
@@ -282,9 +94,6 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
     acc[color] = (acc[color] || 0) + 1;
     return acc;
   }, {});
-
-  // Combine default and custom color meanings
-  const allColorInfo = { ...defaultColorInfo, ...colorMeanings };
 
   const isAllSelected = activeColors.length === 0;
 
@@ -310,7 +119,7 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
       <div className="flex items-center gap-2 flex-wrap">
         {Object.entries(colorGroups).map(([color, count]) => {
           const isActive = activeColors.includes(color);
-          const meaning = allColorInfo[color];
+          const meaning = colorMeanings[color];
           
           return (
             <button
@@ -497,9 +306,6 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile, colorMeanings }) => 
     return acc;
   }, {});
 
-  // Combine default and custom color meanings
-  const allColorInfo = { ...defaultColorInfo, ...colorMeanings };
-
   // Sort groups by number of tiles (popular colors first)
   const sortedGroups = Object.entries(colorGroups)
     .sort(([, a], [, b]) => b.length - a.length);
@@ -507,7 +313,7 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile, colorMeanings }) => 
   return (
     <div className="space-y-8">
       {sortedGroups.map(([color, groupTiles]) => {
-        const info = allColorInfo[color];
+        const info = colorMeanings[color];
 
         return (
           <div key={color} className="relative animate-fadeIn">
@@ -751,32 +557,13 @@ const RainbowTileView = ({ tiles, onEditTile, onDeleteTile }) => {
   );
 };
 
-// Enhanced Color Picker with Smart Suggestions
-const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles, colorMeanings }) => {
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(true);
+// Enhanced Color Picker without Smart Suggestions
+const EnhancedColorPicker = ({ formData, setFormData, existingTiles, colorMeanings }) => {
   const [customColor, setCustomColor] = useState('');
   const [colorError, setColorError] = useState('');
   
-  // Generate suggestions when URL or name changes
-  useEffect(() => {
-    if (url && name) {
-      const colorSuggestions = suggestColor(url, name, existingTiles);
-      setSuggestions(colorSuggestions);
-      setShowSuggestions(true);
-    }
-  }, [url, name, existingTiles]);
-  
   // Get all unique colors from existing tiles
   const usedColors = [...new Set(existingTiles.map(tile => tile.color.toUpperCase()))];
-  
-  // Default colors
-  const defaultColors = [
-    '#BE002F', '#FF0097', '#FA8C35', '#D9B611', '#2ADD9C', '#0066CC'
-  ];
-  
-  // Combine default and used colors, removing duplicates
-  const allAvailableColors = [...new Set([...defaultColors, ...usedColors])];
   
   // Validate hex color
   const isValidHexColor = (color) => {
@@ -798,96 +585,35 @@ const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles, 
   
   return (
     <div>
-      {/* Smart Suggestions */}
-      {suggestions.length > 0 && showSuggestions && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-blue-900 flex items-center gap-1">
-              <Sparkles className="w-4 h-4" />
-              智能推荐
-            </span>
-            <button
-              onClick={() => setShowSuggestions(false)}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="space-y-2">
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => setFormData({ ...formData, color: suggestion.color })}
-                className={`
-                  w-full flex items-center gap-3 p-2 rounded-lg
-                  transition-all hover:bg-white/80
-                  ${formData.color === suggestion.color 
-                    ? 'bg-white shadow-sm ring-2 ring-blue-400' 
-                    : 'bg-white/50'
-                  }
-                `}
-              >
-                <div 
-                  className="w-8 h-8 rounded-lg shadow-sm"
-                  style={{ backgroundColor: suggestion.color }}
-                />
-                <div className="flex-1 text-left">
-                  <div className="text-sm font-medium text-gray-800">
-                    {suggestion.reason}
-                  </div>
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                    <span>置信度:</span>
-                    <div className="flex gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            i < Math.round(suggestion.confidence * 5)
-                              ? 'bg-blue-400'
-                              : 'bg-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {formData.color === suggestion.color && (
-                  <Check className="w-4 h-4 text-blue-600" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* All available colors */}
+      {/* All available colors from tiles */}
       <div className="space-y-3">
-        <div className="flex gap-2 mb-3 flex-wrap">
-          {allAvailableColors.map(color => {
-            const colorInfo = { ...defaultColorInfo, ...colorMeanings }[color];
-            return (
-              <button
-                key={color}
-                onClick={() => setFormData({ ...formData, color })}
-                className={`relative group w-10 h-10 rounded-lg transition-all border-2 ${
-                  formData.color === color 
-                    ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
-                    : 'hover:scale-105 border-transparent'
-                }`}
-                style={{ 
-                  backgroundColor: color,
-                }}
-                title={colorInfo?.name || color}
-              >
-                {/* Show color code on hover */}
-                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-mono text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  {color}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {usedColors.length > 0 && (
+          <div className="flex gap-2 mb-3 flex-wrap">
+            {usedColors.map(color => {
+              const colorInfo = colorMeanings[color];
+              return (
+                <button
+                  key={color}
+                  onClick={() => setFormData({ ...formData, color })}
+                  className={`relative group w-10 h-10 rounded-lg transition-all border-2 ${
+                    formData.color === color 
+                      ? 'ring-2 ring-offset-2 ring-gray-400 scale-110 border-gray-300' 
+                      : 'hover:scale-105 border-transparent'
+                  }`}
+                  style={{ 
+                    backgroundColor: color,
+                  }}
+                  title={colorInfo?.name || color}
+                >
+                  {/* Show color code on hover */}
+                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-mono text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    {color}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Custom color input */}
         <div className="space-y-2 mt-8">
@@ -1043,8 +769,6 @@ const TileModal = ({ isOpen, onClose, editingTile, onSave, existingTiles, colorM
             <EnhancedColorPicker
               formData={formData}
               setFormData={setFormData}
-              url={formData.url}
-              name={formData.name}
               existingTiles={existingTiles}
               colorMeanings={colorMeanings}
             />
@@ -1159,8 +883,7 @@ const ColorMeaningsModal = ({ isOpen, onClose, colorMeanings, onSave, tiles }) =
         
         <div className="space-y-4">
           {usedColors.map(color => {
-            const meaning = meanings[color] || defaultColorInfo[color];
-            const isCustom = !defaultColorInfo[color] || meanings[color];
+            const meaning = meanings[color];
             const isEditing = editingColor === color;
             
             return (
@@ -1241,7 +964,7 @@ const ColorMeaningsModal = ({ isOpen, onClose, colorMeanings, onSave, tiles }) =
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      {isCustom && (
+                      {meaning && (
                         <button
                           onClick={() => handleDelete(color)}
                           className="p-1.5 text-red-600 hover:bg-gray-200 rounded"
