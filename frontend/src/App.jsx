@@ -1476,18 +1476,25 @@ const saveTiles = async (newTiles, isOptimistic = false) => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [filteredTiles, viewMode]);
 
-  // Handle drag end for @dnd-kit
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
+// Handle drag end for @dnd-kit
+const handleDragEnd = (event) => {
+  const { active, over } = event;
 
-    if (active.id !== over.id) {
-      const oldIndex = tiles.findIndex((tile) => tile.id === active.id);
-      const newIndex = tiles.findIndex((tile) => tile.id === over.id);
+  if (over && active.id !== over.id) {
+    const oldIndex = tiles.findIndex((tile) => tile.id === active.id);
+    const newIndex = tiles.findIndex((tile) => tile.id === over.id);
+    
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newTiles = arrayMove([...tiles], oldIndex, newIndex);
       
-      const newTiles = arrayMove(tiles, oldIndex, newIndex);
-      saveTiles(newTiles, true);
+      // Immediate visual update
+      setTiles(newTiles);
+      
+      // Background save (without optimistic flag since we already updated state)
+      saveTiles(newTiles, false);
     }
-  };
+  }
+};
 
   // Add/Edit tile
   const handleSaveTile = (tileData) => {
