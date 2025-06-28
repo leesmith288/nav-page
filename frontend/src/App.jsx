@@ -501,11 +501,7 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
   return (
     <div className="space-y-8">
       {sortedGroups.map(([color, groupTiles]) => {
-        const info = colorInfo[color] || { 
-          name: '其他', 
-          emoji: '🔷', 
-          description: `${color}` 
-        };
+        const info = colorInfo[color];
 
         return (
           <div key={color} className="relative animate-fadeIn">
@@ -519,19 +515,25 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile }) => {
               
               {/* Section title */}
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{info.emoji}</span>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {info.name}
-                </h3>
-                <span className="text-sm text-gray-500">
-                  ({groupTiles.length})
+                {info && (
+                  <>
+                    <span className="text-2xl">{info.emoji}</span>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {info.name}
+                    </h3>
+                  </>
+                )}
+                <span className="text-sm text-gray-500 font-mono">
+                  {color} ({groupTiles.length})
                 </span>
               </div>
               
               {/* Description */}
-              <span className="text-sm text-gray-500 hidden md:inline">
-                {info.description}
-              </span>
+              {info && (
+                <span className="text-sm text-gray-500 hidden md:inline">
+                  {info.description}
+                </span>
+              )}
             </div>
 
             {/* Tiles Grid for this color */}
@@ -861,7 +863,7 @@ const EnhancedColorPicker = ({ formData, setFormData, url, name, existingTiles }
               style={{ 
                 backgroundColor: color,
               }}
-              title={colorInfo[color]?.name || color}
+              title={color}
             />
           ))}
         </div>
@@ -1856,7 +1858,7 @@ function App() {
       
       {/* Footer */}
       <div className="text-center py-4 text-sm text-gray-500">
-        <span className="text-xs">Press Ctrl+K to open command palette · 1-9 to quick open</span>
+        
       </div>
     </div>
   );
