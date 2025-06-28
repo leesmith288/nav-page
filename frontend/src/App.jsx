@@ -1347,24 +1347,40 @@ function App() {
     setColorMeanings(meanings);
   };
 
-  // Save tiles to API
-  const saveTiles = async (newTiles) => {
-    try {
-      setSaving(true);
-      const response = await fetch(`${API_BASE_URL}/tiles`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tiles: newTiles })
-      });
-      if (!response.ok) throw new Error('Failed to save tiles');
+// Save tiles to API
+const saveTiles = async (newTiles, isOptimistic = false) => {
+  // If this is an optimistic update, update state immediately
+  if (isOptimistic) {
+    setTiles(newTiles);
+  }
+  
+  try {
+    setSaving(true);
+    const response = await fetch(`${API_BASE_URL}/tiles`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tiles: newTiles })
+    });
+    if (!response.ok) throw new Error('Failed to save tiles');
+    
+    // Only update state if this wasn't an optimistic update
+    if (!isOptimistic) {
       setTiles(newTiles);
-    } catch (err) {
-      setError('无法保存磁贴数据');
-      console.error('Error saving tiles:', err);
-    } finally {
-      setSaving(false);
     }
-  };
+  } catch (err) {
+    // If this was an optimistic update and it failed, rollback
+    if (isOptimistic) {
+      // Reload from server to get the correct state
+      loadTiles();
+      setError('保存失败，已恢复到之前的状态');
+    } else {
+      setError('无法保存磁贴数据');
+    }
+    console.error('Error saving tiles:', err);
+  } finally {
+    setSaving(false);
+  }
+};
 
   // Refresh all favicons
   const refreshFavicons = async () => {
@@ -1469,7 +1485,7 @@ function App() {
       const newIndex = tiles.findIndex((tile) => tile.id === over.id);
       
       const newTiles = arrayMove(tiles, oldIndex, newIndex);
-      saveTiles(newTiles);
+      saveTiles(newTiles, true);
     }
   };
 
