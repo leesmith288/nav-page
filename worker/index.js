@@ -30,13 +30,28 @@ export default {
       return await migrateKVtoD1(env);
     }
 
-    // Route handling
+    // Route handling for tiles
     if (path === '/api/tiles') {
       switch (request.method) {
         case 'GET':
           return await getTiles(env);
         case 'PUT':
           return await updateTiles(request, env);
+        default:
+          return new Response('Method not allowed', { 
+            status: 405,
+            headers: corsHeaders 
+          });
+      }
+    }
+
+    // Route handling for color meanings
+    if (path === '/api/colorMeanings') {
+      switch (request.method) {
+        case 'GET':
+          return await getColorMeanings(env);
+        case 'PUT':
+          return await updateColorMeanings(request, env);
         default:
           return new Response('Method not allowed', { 
             status: 405,
@@ -199,6 +214,83 @@ async function deleteTile(env, tileId) {
   } catch (error) {
     console.error('Error deleting tile:', error);
     return new Response(JSON.stringify({ error: 'Failed to delete tile' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+}
+
+// Get color meanings from D1
+async function getColorMeanings(env) {
+  try {
+    // First check if color_meanings table exists and has data
+    const result = await env.DB.prepare('SELECT data FROM color_meanings WHERE id = 1').first();
+    const colorMeanings = result && result.data ? JSON.parse(result.data) : {};
+    
+    return new Response(JSON.stringify({ colorMeanings }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    console.error('Error getting color meanings:', error);
+    // Return empty object if table doesn't exist yet
+    return new Response(JSON.stringify({ colorMeanings: {} }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+}
+
+// Update color meanings in D1
+async function updateColorMeanings(request, env) {
+  try {
+    const body = await request.json();
+    const { colorMeanings } = body;
+    
+    if (typeof colorMeanings !== 'object') {
+      return new Response(JSON.stringify({ error: 'Invalid color meanings format' }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
+    
+    // First, ensure the table exists
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS color_meanings (
+        id INTEGER PRIMARY KEY,
+        data TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    
+    // Insert or update the color meanings
+    await env.DB.prepare(`
+      INSERT INTO color_meanings (id, data, updated_at) 
+      VALUES (1, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET 
+        data = excluded.data,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(JSON.stringify(colorMeanings)).run();
+    
+    return new Response(JSON.stringify({ success: true, colorMeanings }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    console.error('Error updating color meanings:', error);
+    return new Response(JSON.stringify({ error: 'Failed to update color meanings' }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
