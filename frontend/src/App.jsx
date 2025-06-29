@@ -31,6 +31,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 // Utils
 import { toPinyin } from './utils/pinyin';
+import { api } from './utils/api';
 
 function App() {
   // State management
@@ -54,6 +55,7 @@ function App() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid', 'grouped', 'rainbow'
   const [colorMeanings, setColorMeanings] = useState({});
   const [isColorMeaningsModalOpen, setIsColorMeaningsModalOpen] = useState(false);
+  const [savingColorMeanings, setSavingColorMeanings] = useState(false);
 
   // Setup sensors for drag and drop
   const sensors = useSensors(
@@ -67,17 +69,38 @@ function App() {
     })
   );
 
-  // Load color meanings from localStorage
+  // Load color meanings from API
   useEffect(() => {
-    const savedMeanings = localStorage.getItem('colorMeanings');
-    if (savedMeanings) {
-      setColorMeanings(JSON.parse(savedMeanings));
-    }
+    loadColorMeanings();
   }, []);
 
-  const saveColorMeanings = (meanings) => {
-    localStorage.setItem('colorMeanings', JSON.stringify(meanings));
-    setColorMeanings(meanings);
+  const loadColorMeanings = async () => {
+    try {
+      const meanings = await api.loadColorMeanings();
+      setColorMeanings(meanings);
+    } catch (err) {
+      console.error('Error loading color meanings:', err);
+      // Fallback to localStorage if API fails
+      const savedMeanings = localStorage.getItem('colorMeanings');
+      if (savedMeanings) {
+        setColorMeanings(JSON.parse(savedMeanings));
+      }
+    }
+  };
+
+  const saveColorMeanings = async (meanings) => {
+    try {
+      setSavingColorMeanings(true);
+      await api.saveColorMeanings(meanings);
+      setColorMeanings(meanings);
+      // Also save to localStorage as backup
+      localStorage.setItem('colorMeanings', JSON.stringify(meanings));
+    } catch (err) {
+      console.error('Error saving color meanings:', err);
+      setError('无法保存颜色含义');
+    } finally {
+      setSavingColorMeanings(false);
+    }
   };
 
   // Filter tiles based on search and color
@@ -311,7 +334,7 @@ function App() {
                 />
               </label>
 
-              {saving && (
+              {(saving || savingColorMeanings) && (
                 <div className="flex items-center gap-2 text-sm text-blue-600">
                   <Save className="w-4 h-4 animate-pulse" />
                   <span className="text-xs">已保存</span>
