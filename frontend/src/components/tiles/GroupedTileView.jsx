@@ -33,17 +33,23 @@ const GroupedTileView = ({ tiles, onEditTile, onDeleteTile, colorMeanings }) => 
               
               {/* Section title */}
               <div className="flex items-center gap-2">
-                {info && (
+                {info ? (
                   <>
                     <span className="text-2xl">{info.emoji}</span>
                     <h3 className="text-lg font-semibold text-gray-800">
                       {info.name}
                     </h3>
+                    <span className="text-sm text-gray-500">
+                      ({groupTiles.length})
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm text-gray-500 font-mono">
+                      {color} ({groupTiles.length})
+                    </span>
                   </>
                 )}
-                <span className="text-sm text-gray-500 font-mono">
-                  {color} ({groupTiles.length})
-                </span>
               </div>
               
               {/* Description */}
