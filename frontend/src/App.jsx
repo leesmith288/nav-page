@@ -57,6 +57,9 @@ function App() {
   const [isColorMeaningsModalOpen, setIsColorMeaningsModalOpen] = useState(false);
   const [savingColorMeanings, setSavingColorMeanings] = useState(false);
 
+  // OS detection for keyboard shortcuts
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
   // Setup sensors for drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -279,8 +282,15 @@ function App() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="搜索名称或拼音..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                className="w-full pl-10 pr-16 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
               />
+              {/* Keyboard shortcut hint */}
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-500 pointer-events-none">
+                <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-200 font-mono">
+                  {isMac ? '⌘' : 'Ctrl'}
+                </kbd>
+                <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-200 font-mono">K</kbd>
+              </div>
             </div>
             
             {/* Action Buttons */}
