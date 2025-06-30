@@ -107,13 +107,14 @@ const ColorMeaningsModal = ({ isOpen, onClose, colorMeanings, onSave, tiles }) =
                   <>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        {meaning && (
+                        {meaning ? (
                           <>
                             <span className="text-lg">{meaning.emoji}</span>
                             <span className="font-medium text-gray-800">{meaning.name}</span>
                           </>
+                        ) : (
+                          <span className="text-sm text-gray-500 font-mono">{color}</span>
                         )}
-                        <span className="text-sm text-gray-500 font-mono">{color}</span>
                       </div>
                       {meaning?.description && (
                         <p className="text-sm text-gray-600 mt-1">{meaning.description}</p>
