@@ -330,15 +330,20 @@ function App() {
             </button>
             
             {/* Color Filter - Original component */}
-            {viewMode === 'grid' && tiles.length > 0 && (
+            {tiles.length > 0 && (
               <div className="flex-1 overflow-x-auto">
-                <ColorFilter
-                  tiles={tiles}
-                  activeColors={activeColorFilters}
-                  onColorToggle={handleColorToggle}
-                  onReset={handleColorReset}
-                  colorMeanings={colorMeanings}
-                />
+                {viewMode === 'grid' ? (
+                  <ColorFilter
+                    tiles={tiles}
+                    activeColors={activeColorFilters}
+                    onColorToggle={handleColorToggle}
+                    onReset={handleColorReset}
+                    colorMeanings={colorMeanings}
+                  />
+                ) : (
+                  /* Empty spacer to maintain layout */
+                  <div className="h-8" />
+                )}
               </div>
             )}
             
