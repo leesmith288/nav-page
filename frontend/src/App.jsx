@@ -250,16 +250,12 @@ function App() {
 
   // Color filter handlers
   const handleColorToggle = (color) => {
-    if (color === 'ALL') {
-      setActiveColorFilters([]);
-    } else {
-      setActiveColorFilters(prev => {
-        if (prev.includes(color)) {
-          return prev.filter(c => c !== color);
-        }
-        return [...prev, color];
-      });
-    }
+    setActiveColorFilters(prev => {
+      if (prev.includes(color)) {
+        return prev.filter(c => c !== color);
+      }
+      return [...prev, color];
+    });
   };
 
   const handleColorReset = () => {
@@ -298,6 +294,14 @@ function App() {
         .animate-slideIn {
           animation: slideIn 0.5s ease-out;
         }
+        
+        .scrollbar-hide {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
       `}</style>
 
       {/* Header */}
@@ -325,47 +329,16 @@ function App() {
               <Plus className="w-5 h-5" />
             </button>
             
-            {/* Color Filter Pills - Only show in grid view */}
+            {/* Color Filter - Original component */}
             {viewMode === 'grid' && tiles.length > 0 && (
-              <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                <button
-                  onClick={() => handleColorToggle('ALL')}
-                  className={`px-3 py-1 text-sm rounded-full transition-all whitespace-nowrap ${
-                    activeColorFilters.length === 0
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  全部
-                </button>
-                <span className="text-gray-300 mx-1">•</span>
-                {uniqueColors.map((color, index) => (
-                  <React.Fragment key={color}>
-                    <button
-                      onClick={() => handleColorToggle(color)}
-                      className={`px-2.5 py-1 text-sm rounded-full transition-all ${
-                        activeColorFilters.includes(color)
-                          ? 'text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                      style={{
-                        backgroundColor: activeColorFilters.includes(color) 
-                          ? color.toLowerCase() 
-                          : undefined,
-                        borderWidth: activeColorFilters.includes(color) ? '2px' : '0',
-                        borderColor: activeColorFilters.includes(color) 
-                          ? color.toLowerCase() 
-                          : undefined,
-                      }}
-                      title={colorMeanings[color] || color}
-                    >
-                      {colorCounts[color]}
-                    </button>
-                    {index < uniqueColors.length - 1 && (
-                      <span className="text-gray-300 mx-1">•</span>
-                    )}
-                  </React.Fragment>
-                ))}
+              <div className="flex-1 overflow-x-auto">
+                <ColorFilter
+                  tiles={tiles}
+                  activeColors={activeColorFilters}
+                  onColorToggle={handleColorToggle}
+                  onReset={handleColorReset}
+                  colorMeanings={colorMeanings}
+                />
               </div>
             )}
             
