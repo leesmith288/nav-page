@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Download, Upload, Grid, Loader2, ExternalLink, Save, AlertCircle, RefreshCw, Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Download, Upload, Grid, Loader2, ExternalLink, Save, AlertCircle, RefreshCw, Settings, MoreHorizontal, ChevronDown } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -33,6 +33,128 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { toPinyin } from './utils/pinyin';
 import { api } from './utils/api';
 
+// Compact View Mode Toggle Component
+const CompactViewModeToggle = ({ mode, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const modes = [
+    { id: 'grid', label: '网格视图' },
+    { id: 'grouped', label: '分组视图' },
+    { id: 'rainbow', label: '彩虹视图' },
+  ];
+  
+  const currentMode = modes.find(m => m.id === mode);
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
+      >
+        <span>{currentMode?.label}</span>
+        <ChevronDown className="w-4 h-4" />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[120px]">
+          {modes.map((modeOption) => (
+            <button
+              key={modeOption.id}
+              onClick={() => {
+                onChange(modeOption.id);
+                setIsOpen(false);
+              }}
+              className={`
+                w-full text-left px-3 py-2 text-sm transition-colors
+                ${mode === modeOption.id 
+                  ? 'bg-blue-50 text-blue-600' 
+                  : 'hover:bg-gray-50'
+                }
+              `}
+            >
+              {modeOption.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// More Actions Dropdown Component
+const MoreActionsDropdown = ({ 
+  onRefreshFavicons, 
+  onExport, 
+  onImport, 
+  onColorMeanings,
+  refreshingFavicons 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        title="更多操作"
+      >
+        <MoreHorizontal className="w-5 h-5" />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+          <button
+            onClick={() => {
+              onColorMeanings();
+              setIsOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            颜色含义设置
+          </button>
+          
+          <button
+            onClick={() => {
+              onRefreshFavicons();
+              setIsOpen(false);
+            }}
+            disabled={refreshingFavicons}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshingFavicons ? 'animate-spin' : ''}`} />
+            刷新所有图标
+          </button>
+          
+          <button
+            onClick={() => {
+              onExport();
+              setIsOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            导出配置
+          </button>
+          
+          <label className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
+            <Upload className="w-4 h-4" />
+            导入配置
+            <input
+              type="file"
+              accept=".json"
+              onChange={(e) => {
+                onImport(e);
+                setIsOpen(false);
+              }}
+              className="hidden"
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   // State management
   const {
@@ -47,6 +169,7 @@ function App() {
   } = useTiles();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTile, setEditingTile] = useState(null);
   const [refreshingFavicons, setRefreshingFavicons] = useState(false);
@@ -56,6 +179,9 @@ function App() {
   const [colorMeanings, setColorMeanings] = useState({});
   const [isColorMeaningsModalOpen, setIsColorMeaningsModalOpen] = useState(false);
   const [savingColorMeanings, setSavingColorMeanings] = useState(false);
+
+  // Refs
+  const searchInputRef = useRef(null);
 
   // OS detection for keyboard shortcuts
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -132,6 +258,20 @@ function App() {
     viewMode, 
     setIsCommandPaletteOpen 
   });
+
+  // Handle search expansion
+  const handleSearchExpand = () => {
+    setIsSearchExpanded(true);
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleSearchCollapse = () => {
+    if (!searchTerm) {
+      setIsSearchExpanded(false);
+    }
+  };
 
   // Handle drag end for @dnd-kit
   const handleDragEnd = (event) => {
@@ -273,88 +413,88 @@ function App() {
       {/* Header */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-md shadow-sm z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            {/* Search Bar */}
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="搜索名称或拼音..."
-                className="w-full pl-10 pr-16 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-              />
-              {/* Keyboard shortcut hint */}
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-500 pointer-events-none">
-                <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-200 font-mono">
-                  {isMac ? '⌘' : 'Ctrl'}
-                </kbd>
-                <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-200 font-mono">K</kbd>
-              </div>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex gap-2 items-center">
-              {/* View Mode Toggle */}
-              <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-              
-              <div className="w-px h-8 bg-gray-300" />
-              
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">添加</span>
-              </button>
-              
-              <button
-                onClick={() => setIsColorMeaningsModalOpen(true)}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="颜色含义设置"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              
-              <button
-                onClick={handleRefreshFavicons}
-                disabled={refreshingFavicons}
-                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="刷新所有图标"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshingFavicons ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline text-sm">刷新图标</span>
-              </button>
-              
-              <button
-                onClick={handleExport}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="导出配置"
-              >
-                <Download className="w-5 h-5" />
-              </button>
-              
-              <label className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="导入配置">
-                <Upload className="w-5 h-5" />
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  className="hidden"
-                />
-              </label>
-
-              {(saving || savingColorMeanings) && (
-                <div className="flex items-center gap-2 text-sm text-blue-600">
-                  <Save className="w-4 h-4 animate-pulse" />
-                  <span className="text-xs">已保存</span>
+          {/* Single Line Navigation */}
+          <div className="flex items-center gap-3">
+            {/* Search Icon/Expanded Bar */}
+            <div className="relative">
+              {isSearchExpanded ? (
+                <div className="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 min-w-[250px] sm:min-w-[300px]">
+                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="搜索名称或拼音..."
+                    className="flex-1 bg-transparent focus:outline-none text-sm"
+                    onBlur={handleSearchCollapse}
+                  />
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setIsSearchExpanded(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    ×
+                  </button>
                 </div>
+              ) : (
+                <button
+                  onClick={handleSearchExpand}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={`搜索 (${isMac ? '⌘' : 'Ctrl'}+K)`}
+                >
+                  <Search className="w-5 h-5" />
+                </button>
               )}
             </div>
+
+            {/* Add Button */}
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">添加</span>
+            </button>
+
+            {/* Color Filters - Only show if we have tiles and are not in search mode */}
+            {!isSearchExpanded && tiles.length > 0 && viewMode === 'grid' && (
+              <div className="flex items-center gap-2 flex-1 overflow-x-auto">
+                <ColorFilter
+                  tiles={tiles}
+                  activeColors={activeColorFilters}
+                  onColorToggle={handleColorToggle}
+                  onReset={handleColorReset}
+                  colorMeanings={colorMeanings}
+                />
+              </div>
+            )}
+
+            {/* View Mode Toggle */}
+            <CompactViewModeToggle mode={viewMode} onChange={setViewMode} />
+
+            {/* More Actions */}
+            <MoreActionsDropdown
+              onRefreshFavicons={handleRefreshFavicons}
+              onExport={handleExport}
+              onImport={handleImport}
+              onColorMeanings={() => setIsColorMeaningsModalOpen(true)}
+              refreshingFavicons={refreshingFavicons}
+            />
+
+            {/* Saving Indicator */}
+            {(saving || savingColorMeanings) && (
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <Save className="w-4 h-4 animate-pulse" />
+                <span className="text-xs hidden sm:inline">已保存</span>
+              </div>
+            )}
           </div>
-          
-          {/* Color Filter (only show in grid view) */}
-          {tiles.length > 0 && viewMode === 'grid' && (
+
+          {/* Color Filter Row - Show when search is expanded and we have tiles */}
+          {isSearchExpanded && tiles.length > 0 && viewMode === 'grid' && (
             <div className="mt-4">
               <ColorFilter
                 tiles={tiles}
