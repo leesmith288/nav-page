@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Download, Upload, Grid, Loader2, ExternalLink, Save, AlertCircle, RefreshCw, Settings, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Search, Plus, Download, Upload, Grid, Loader2, ExternalLink, Save, AlertCircle, RefreshCw, Settings, MoreHorizontal, X } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -33,154 +33,6 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { toPinyin } from './utils/pinyin';
 import { api } from './utils/api';
 
-// Custom hook for click outside detection
-const useClickOutside = (ref, callback) => {
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (ref.current && !ref.current.contains(event.target)) {
-        callback();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [ref, callback]);
-};
-
-// Compact View Mode Toggle Component
-const CompactViewModeToggle = ({ mode, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  
-  useClickOutside(dropdownRef, () => setIsOpen(false));
-  
-  const modes = [
-    { id: 'grid', label: '网格视图' },
-    { id: 'grouped', label: '分组视图' },
-    { id: 'rainbow', label: '彩虹视图' },
-  ];
-  
-  const currentMode = modes.find(m => m.id === mode);
-  
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-      >
-        <span>{currentMode?.label}</span>
-        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[120px]">
-          {modes.map((modeOption) => (
-            <button
-              key={modeOption.id}
-              onClick={() => {
-                onChange(modeOption.id);
-                setIsOpen(false);
-              }}
-              className={`
-                w-full text-left px-3 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg
-                ${mode === modeOption.id 
-                  ? 'bg-blue-50 text-blue-600' 
-                  : 'hover:bg-gray-50'
-                }
-              `}
-            >
-              {modeOption.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// More Actions Dropdown Component
-const MoreActionsDropdown = ({ 
-  onRefreshFavicons, 
-  onExport, 
-  onImport, 
-  onColorMeanings,
-  refreshingFavicons 
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  
-  useClickOutside(dropdownRef, () => setIsOpen(false));
-  
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-        title="更多操作"
-      >
-        <MoreHorizontal className="w-5 h-5" />
-      </button>
-      
-      {isOpen && (
-        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
-          <button
-            onClick={() => {
-              onColorMeanings();
-              setIsOpen(false);
-            }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 first:rounded-t-lg"
-          >
-            <Settings className="w-4 h-4" />
-            颜色含义设置
-          </button>
-          
-          <button
-            onClick={() => {
-              onRefreshFavicons();
-              setIsOpen(false);
-            }}
-            disabled={refreshingFavicons}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshingFavicons ? 'animate-spin' : ''}`} />
-            刷新所有图标
-          </button>
-          
-          <button
-            onClick={() => {
-              onExport();
-              setIsOpen(false);
-            }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            导出配置
-          </button>
-          
-          <label className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 cursor-pointer last:rounded-b-lg">
-            <Upload className="w-4 h-4" />
-            导入配置
-            <input
-              type="file"
-              accept=".json"
-              onChange={(e) => {
-                onImport(e);
-                setIsOpen(false);
-              }}
-              className="hidden"
-            />
-          </label>
-        </div>
-      )}
-    </div>
-  );
-};
-
-  );
-};
-
 function App() {
   // State management
   const {
@@ -195,7 +47,6 @@ function App() {
   } = useTiles();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTile, setEditingTile] = useState(null);
   const [refreshingFavicons, setRefreshingFavicons] = useState(false);
@@ -205,9 +56,8 @@ function App() {
   const [colorMeanings, setColorMeanings] = useState({});
   const [isColorMeaningsModalOpen, setIsColorMeaningsModalOpen] = useState(false);
   const [savingColorMeanings, setSavingColorMeanings] = useState(false);
-
-  // Refs
-  const searchInputRef = useRef(null);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef(null);
 
   // OS detection for keyboard shortcuts
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -223,6 +73,28 @@ function App() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Calculate color counts
+  const colorCounts = tiles.reduce((acc, tile) => {
+    const color = tile.color.toUpperCase();
+    acc[color] = (acc[color] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Get unique colors sorted by count
+  const uniqueColors = Object.keys(colorCounts).sort((a, b) => colorCounts[b] - colorCounts[a]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Load color meanings from API
   useEffect(() => {
@@ -284,20 +156,6 @@ function App() {
     viewMode, 
     setIsCommandPaletteOpen 
   });
-
-  // Handle search expansion
-  const handleSearchExpand = () => {
-    setIsSearchExpanded(true);
-    setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 100);
-  };
-
-  const handleSearchCollapse = () => {
-    if (!searchTerm) {
-      setIsSearchExpanded(false);
-    }
-  };
 
   // Handle drag end for @dnd-kit
   const handleDragEnd = (event) => {
@@ -361,6 +219,7 @@ function App() {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+    setIsMoreMenuOpen(false);
   };
 
   // Import configuration
@@ -386,16 +245,21 @@ function App() {
       }
     };
     reader.readAsText(file);
+    setIsMoreMenuOpen(false);
   };
 
   // Color filter handlers
   const handleColorToggle = (color) => {
-    setActiveColorFilters(prev => {
-      if (prev.includes(color)) {
-        return prev.filter(c => c !== color);
-      }
-      return [...prev, color];
-    });
+    if (color === 'ALL') {
+      setActiveColorFilters([]);
+    } else {
+      setActiveColorFilters(prev => {
+        if (prev.includes(color)) {
+          return prev.filter(c => c !== color);
+        }
+        return [...prev, color];
+      });
+    }
   };
 
   const handleColorReset = () => {
@@ -434,108 +298,145 @@ function App() {
         .animate-slideIn {
           animation: slideIn 0.5s ease-out;
         }
-        
-        /* Fix tooltip z-index issue */
-        .group:hover .absolute {
-          z-index: 9999 !important;
-        }
       `}</style>
 
       {/* Header */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-md shadow-sm z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Single Line Navigation */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-3">
-            {/* Search Icon/Expanded Bar */}
+            {/* Search Bar - Simplified */}
             <div className="relative">
-              {isSearchExpanded ? (
-                <div className="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 min-w-[250px] sm:min-w-[300px]">
-                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="搜索名称或拼音..."
-                    className="flex-1 bg-transparent focus:outline-none text-sm"
-                    onBlur={handleSearchCollapse}
-                  />
-                  <button
-                    onClick={() => {
-                      setSearchTerm('');
-                      setIsSearchExpanded(false);
-                    }}
-                    className="text-gray-400 hover:text-gray-600 p-1"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleSearchExpand}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  title={`搜索 (${isMac ? '⌘' : 'Ctrl'}+K)`}
-                >
-                  <Search className="w-5 h-5" />
-                </button>
-              )}
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="搜索..."
+                className="w-40 sm:w-56 pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              />
             </div>
-
-            {/* Add Button */}
+            
+            {/* Add Button - Compact */}
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              title="添加磁贴"
             >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">添加</span>
+              <Plus className="w-5 h-5" />
             </button>
-
-            {/* Color Filters - Only show if we have tiles and are not in search mode */}
-            {!isSearchExpanded && tiles.length > 0 && viewMode === 'grid' && (
-              <div className="flex items-center gap-2 flex-1 overflow-x-auto">
-                <ColorFilter
-                  tiles={tiles}
-                  activeColors={activeColorFilters}
-                  onColorToggle={handleColorToggle}
-                  onReset={handleColorReset}
-                  colorMeanings={colorMeanings}
-                />
+            
+            {/* Color Filter Pills - Only show in grid view */}
+            {viewMode === 'grid' && tiles.length > 0 && (
+              <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                <button
+                  onClick={() => handleColorToggle('ALL')}
+                  className={`px-3 py-1 text-sm rounded-full transition-all whitespace-nowrap ${
+                    activeColorFilters.length === 0
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  全部
+                </button>
+                <span className="text-gray-300 mx-1">•</span>
+                {uniqueColors.map((color, index) => (
+                  <React.Fragment key={color}>
+                    <button
+                      onClick={() => handleColorToggle(color)}
+                      className={`px-2.5 py-1 text-sm rounded-full transition-all ${
+                        activeColorFilters.includes(color)
+                          ? 'text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      style={{
+                        backgroundColor: activeColorFilters.includes(color) 
+                          ? color.toLowerCase() 
+                          : undefined,
+                        borderWidth: activeColorFilters.includes(color) ? '2px' : '0',
+                        borderColor: activeColorFilters.includes(color) 
+                          ? color.toLowerCase() 
+                          : undefined,
+                      }}
+                      title={colorMeanings[color] || color}
+                    >
+                      {colorCounts[color]}
+                    </button>
+                    {index < uniqueColors.length - 1 && (
+                      <span className="text-gray-300 mx-1">•</span>
+                    )}
+                  </React.Fragment>
+                ))}
               </div>
             )}
-
+            
             {/* View Mode Toggle */}
-            <CompactViewModeToggle mode={viewMode} onChange={setViewMode} />
-
-            {/* More Actions */}
-            <MoreActionsDropdown
-              onRefreshFavicons={handleRefreshFavicons}
-              onExport={handleExport}
-              onImport={handleImport}
-              onColorMeanings={() => setIsColorMeaningsModalOpen(true)}
-              refreshingFavicons={refreshingFavicons}
-            />
-
-            {/* Saving Indicator */}
+            <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+            
+            {/* More Options Menu */}
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="更多选项"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {isMoreMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                  <button
+                    onClick={() => {
+                      setIsColorMeaningsModalOpen(true);
+                      setIsMoreMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    颜色含义设置
+                  </button>
+                  
+                  <button
+                    onClick={handleRefreshFavicons}
+                    disabled={refreshingFavicons}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${refreshingFavicons ? 'animate-spin' : ''}`} />
+                    刷新所有图标
+                  </button>
+                  
+                  <div className="border-t border-gray-100 my-1" />
+                  
+                  <button
+                    onClick={handleExport}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    导出配置
+                  </button>
+                  
+                  <label className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
+                    <Upload className="w-4 h-4" />
+                    导入配置
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImport}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+            
+            {/* Save indicator */}
             {(saving || savingColorMeanings) && (
-              <div className="flex items-center gap-2 text-sm text-blue-600">
-                <Save className="w-4 h-4 animate-pulse" />
-                <span className="text-xs hidden sm:inline">已保存</span>
+              <div className="flex items-center gap-1 text-xs text-blue-600">
+                <Save className="w-3 h-3 animate-pulse" />
+                <span>已保存</span>
               </div>
             )}
           </div>
-
-          {/* Color Filter Row - Show when search is expanded and we have tiles */}
-          {isSearchExpanded && tiles.length > 0 && viewMode === 'grid' && (
-            <div className="mt-4">
-              <ColorFilter
-                tiles={tiles}
-                activeColors={activeColorFilters}
-                onColorToggle={handleColorToggle}
-                onReset={handleColorReset}
-                colorMeanings={colorMeanings}
-              />
-            </div>
-          )}
         </div>
       </div>
 
