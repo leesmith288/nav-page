@@ -8,9 +8,9 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
     acc[color] = (acc[color] || 0) + 1;
     return acc;
   }, {});
-
+  
   const isAllSelected = activeColors.length === 0;
-
+  
   return (
     <div className="flex items-center gap-3 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-lg">
       {/* All filter */}
@@ -26,9 +26,9 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
       >
         全部
       </button>
-
+      
       <div className="w-px h-6 bg-gray-300" />
-
+      
       {/* Color filters */}
       <div className="flex items-center gap-2 flex-wrap">
         {Object.entries(colorGroups).map(([color, count]) => {
@@ -72,23 +72,26 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
               >
                 {count}
               </span>
-
-              {/* Tooltip */}
+              
+              {/* Tooltip - positioned below */}
               {meaning && (
                 <div className="
-                  absolute -top-8 left-1/2 transform -translate-x-1/2
+                  absolute top-full mt-2 left-1/2 transform -translate-x-1/2
                   bg-gray-900 text-white text-xs px-2 py-1 rounded
                   opacity-0 group-hover:opacity-100 transition-opacity
-                  pointer-events-none whitespace-nowrap z-10
+                  pointer-events-none whitespace-nowrap z-50
+                  shadow-lg
                 ">
                   {meaning.emoji} {meaning.name}
+                  {/* Small arrow pointing up */}
+                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
                 </div>
               )}
             </button>
           );
         })}
       </div>
-
+      
       {/* Active filter indicator */}
       {activeColors.length > 0 && (
         <>
