@@ -12,7 +12,7 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
   const isAllSelected = activeColors.length === 0;
   
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-lg">
+    <div className="flex items-center gap-2">
       {/* All filter */}
       <button
         onClick={onReset}
@@ -27,79 +27,77 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
         全部
       </button>
       
-      <div className="w-px h-6 bg-gray-300" />
+      <div className="w-px h-6 bg-gray-200" />
       
       {/* Color filters */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1.5">
         {Object.entries(colorGroups).map(([color, count]) => {
           const isActive = activeColors.includes(color);
           const meaning = colorMeanings[color];
           
           return (
-            <button
-              key={color}
-              onClick={() => onColorToggle(color)}
-              className={`
-                group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                transition-all duration-200 transform
-                ${isActive 
-                  ? 'scale-105 shadow-lg' 
-                  : 'hover:scale-105 hover:shadow-md'
-                }
-              `}
-              style={{
-                backgroundColor: isActive ? color : `${color}20`,
-                border: `2px solid ${isActive ? color : 'transparent'}`,
-              }}
-            >
-              {/* Color dot */}
-              <div 
-                className="w-4 h-4 rounded-full shadow-sm"
-                style={{ backgroundColor: color }}
-              />
-              
-              {/* Count */}
-              <span 
+            <div key={color} className="relative group">
+              <button
+                onClick={() => onColorToggle(color)}
                 className={`
-                  text-xs font-medium
-                  ${isActive ? 'text-white' : 'text-gray-700'}
+                  flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
+                  transition-all duration-200
+                  ${isActive 
+                    ? 'shadow-md ring-2 ring-offset-1' 
+                    : 'hover:shadow-sm'
+                  }
                 `}
                 style={{
-                  color: isActive && isColorDark(color) ? 'white' : 
-                         isActive ? 'black' : 
-                         undefined
+                  backgroundColor: isActive ? color : `${color}20`,
+                  borderColor: color,
+                  ringColor: isActive ? color : undefined,
                 }}
+                title={meaning ? `${meaning.emoji} ${meaning.name}` : color}
               >
-                {count}
-              </span>
+                {/* Color dot */}
+                <div 
+                  className="w-3.5 h-3.5 rounded-full shadow-sm"
+                  style={{ backgroundColor: color }}
+                />
+                
+                {/* Count */}
+                <span 
+                  className={`
+                    text-xs font-medium
+                    ${isActive ? 'text-white' : 'text-gray-700'}
+                  `}
+                  style={{
+                    color: isActive && isColorDark(color) ? 'white' : 
+                           isActive && !isColorDark(color) ? 'black' : 
+                           undefined
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
               
-              {/* Tooltip - positioned below */}
+              {/* Side tooltip - appears to the right */}
               {meaning && (
                 <div className="
-                  absolute top-full mt-2 left-1/2 transform -translate-x-1/2
+                  absolute left-full ml-2 top-1/2 -translate-y-1/2
                   bg-gray-900 text-white text-xs px-2 py-1 rounded
-                  opacity-0 group-hover:opacity-100 transition-opacity
-                  pointer-events-none whitespace-nowrap z-50
-                  shadow-lg
+                  opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                  transition-all duration-200 z-50
+                  pointer-events-none whitespace-nowrap
                 ">
                   {meaning.emoji} {meaning.name}
-                  {/* Small arrow pointing up */}
-                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
                 </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
       
-      {/* Active filter indicator */}
+      {/* Active filter count - more compact */}
       {activeColors.length > 0 && (
-        <>
-          <div className="w-px h-6 bg-gray-300" />
-          <span className="text-sm text-gray-500">
-            {activeColors.length} 个颜色筛选
-          </span>
-        </>
+        <span className="text-xs text-gray-500 ml-2">
+          ({activeColors.length})
+        </span>
       )}
     </div>
   );
