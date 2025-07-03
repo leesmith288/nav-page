@@ -32,6 +32,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 // Utils
 import { toPinyin } from './utils/pinyin';
 import { api } from './utils/api';
+import { isColorDark } from './utils/colors';
 
 // Custom hook for click outside detection
 const useClickOutside = (ref, callback) => {
@@ -180,8 +181,6 @@ const MoreActionsDropdown = ({
 
 // Enhanced ColorFilter Component with proper z-index
 const EnhancedColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeanings }) => {
-  const { isColorDark } = require('../../utils/colors');
-  
   // Group tiles by color and count
   const colorGroups = tiles.reduce((acc, tile) => {
     const color = tile.color.toUpperCase();
