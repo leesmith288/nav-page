@@ -76,19 +76,16 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
                 </span>
               </button>
               
-              {/* Delayed right tooltip with better styling */}
+              {/* Side tooltip - appears to the right */}
               {meaning && (
                 <div className="
                   absolute left-full ml-2 top-1/2 -translate-y-1/2
-                  bg-black/90 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-md
+                  bg-gray-900 text-white text-xs px-2 py-1 rounded
                   opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                  group-hover:delay-500 transition-all duration-200 z-50
-                  pointer-events-none whitespace-nowrap shadow-lg
-                  before:content-[''] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2
-                  before:border-4 before:border-transparent before:border-r-black/90
+                  transition-all duration-200 z-50
+                  pointer-events-none whitespace-nowrap
                 ">
-                  <span className="mr-1">{meaning.emoji}</span>
-                  <span>{meaning.name}</span>
+                  {meaning.emoji} {meaning.name}
                 </div>
               )}
             </div>
