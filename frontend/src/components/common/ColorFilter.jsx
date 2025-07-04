@@ -76,14 +76,16 @@ const ColorFilter = ({ tiles, activeColors, onColorToggle, onReset, colorMeaning
                 </span>
               </button>
               
-              {/* Side tooltip - appears to the right */}
+              {/* Bottom tooltip */}
               {meaning && (
                 <div className="
-                  absolute left-full ml-2 top-1/2 -translate-y-1/2
+                  absolute left-1/2 -translate-x-1/2 top-full mt-1
                   bg-gray-900 text-white text-xs px-2 py-1 rounded
                   opacity-0 invisible group-hover:opacity-100 group-hover:visible
                   transition-all duration-200 z-50
                   pointer-events-none whitespace-nowrap
+                  before:content-[''] before:absolute before:bottom-full before:left-1/2 before:-translate-x-1/2
+                  before:border-4 before:border-transparent before:border-b-gray-900
                 ">
                   {meaning.emoji} {meaning.name}
                 </div>
